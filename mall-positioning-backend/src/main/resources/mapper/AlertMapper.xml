@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.project.mapapp.mapper.AlertMapper">
+
+    <resultMap id="BaseResultMap" type="com.project.mapapp.model.entity.Alert">
+            <id property="id" column="id" />
+            <result property="device_id" column="device_id" />
+            <result property="type" column="type" />
+            <result property="message" column="message" />
+            <result property="triggered_at" column="triggered_at" />
+            <result property="resolved_at" column="resolved_at" />
+            <result property="status" column="status" />
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,device_id,type,message,triggered_at,resolved_at,
+        status
+    </sql>
+</mapper>
