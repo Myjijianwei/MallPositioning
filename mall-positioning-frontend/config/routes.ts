@@ -1,0 +1,150 @@
+// 路由配置
+export default [
+  // 用户认证相关路由
+  {
+    path: '/user',
+    layout: false,
+    routes: [
+      { path: '/user/login', component: './User/Login' },
+      { path: '/user/register', component: './User/Register' },
+    ],
+  },
+
+  // 首页
+  {
+    path: '/welcome',
+    icon: 'smile',
+    component: './Welcome',
+    name: '首页',
+  },
+  // 设备管理
+  {
+    path: '/device',
+    icon: 'mobile',
+    name: '设备管理',
+    access: 'canUser', // 修改为 canUser
+    routes: [
+      {
+        path: '/device/list',
+        component: './Device/List',
+        name: '设备列表',
+      },
+      {
+        path: '/device/bind',
+        component: './Device/Bind',
+        name: '绑定设备',
+      },
+      {
+        path: '/device/detail/:id',
+        component: './Device/Detail',
+        name: '设备详情',
+        hideInMenu: true,
+      },
+    ],
+  },
+
+  // 实时监控
+  {
+    path: '/monitor',
+    icon: 'home',
+    name: '实时监控',
+    access: 'canUser', // 修改为 canUser
+    routes: [
+      {
+        path: '/monitor/live/:deviceId',
+        component: './Monitor/Live',
+        name: '实时位置',
+        // hideInMenu: true,
+      },
+      {
+        path: '/monitor/multi',
+        component: './Monitor/Multi',
+        name: '多人监控',
+      },
+
+    ],
+  },
+
+  // 历史轨迹
+  {
+    path: '/history',
+    icon: 'home',
+    name: '历史轨迹',
+    access: 'canUser', // 修改为 canUser
+    routes: [
+      {
+        path: '/history/track/:deviceId',
+        component: './History/Track',
+        name: '轨迹回放',
+        // hideInMenu: true,
+      },
+      {
+        path: '/history/analysis',
+        component: './History/Analysis',
+        name: '轨迹分析',
+      },
+    ],
+  },
+  {
+    path: '/application',
+    name: '申请管理',
+    icon: 'form', // 菜单图标
+    routes: [
+      {
+        path: '/application/submit',
+        name: '提交申请',
+        component: './Application/SubmitForm', // 提交申请页面
+      },
+      {
+        path: '/application/list',
+        name: '申请记录',
+        component: './Application/ApplicationList', // 申请记录页面
+      },
+    ],
+  },
+  {
+    path: '/notification',
+    name: '通知中心',
+    icon: 'bell', // 菜单图标
+    component: './Notification/NotificationList', // 通知中心页面
+    hideInMenu: true,
+  },
+  // 系统管理（管理员权限）
+  {
+    path: '/admin',
+    icon: 'crown',
+    name: '系统管理',
+    access: 'canAdmin', // 修改为 canAdmin
+    routes: [
+      { path: '/admin', redirect: '/admin/user' },
+      {
+        icon: 'user',
+        path: '/admin/user',
+        component: './Admin/User',
+        name: '用户管理'
+      },
+      {
+        icon: 'setting',
+        path: '/admin/system',
+        component: './Admin/System',
+        name: '系统设置',
+      },
+    ],
+  },
+
+  {
+    path: '/personal', // 个人中心相关路由
+    name: '个人中心',
+    icon: 'user',
+    hideInMenu: true, // 不在菜单中显示
+    component: './User/Person', // 个人中心页面
+  },
+
+  // 默认路由
+  { path: '/', redirect: '/welcome' },
+
+  // 404页面
+  { path: '*', layout: false, component: './404' },
+];
+
+//YEwmxp9vLFYyLDGVVmXxpLjjAWW3ENxR

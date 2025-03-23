@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>高德地图定位</title>
+  <style>
+    body, html, #map-container {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+  </style>
+</head>
+<body>
+<div id="map-container"></div>
+<script src="https://webapi.amap.com/maps?v=2.0&key=1170acb8a7694eab86d82b306f5f5bd2"></script>
+<script>
+  // 初始化地图
+  const map = new AMap.Map('map-container', {
+    zoom: 15, // 初始缩放级别
+    center: [117.356610, 38.937025], // 初始中心点（你的真实经纬度）
+  });
+
+  // 使用高德地图定位服务
+  const geolocation = new AMap.Geolocation({
+    enableHighAccuracy: true, // 启用高精度模式
+    timeout: 10000, // 超时时间设置为 10 秒
+  });
+
+  // 定位成功回调
+  geolocation.getCurrentPosition((status, result) => {
+    if (status === 'complete') {
+      const { lng, lat } = result.position;
+      console.log('定位成功：', { longitude: lng, latitude: lat });
+
+      // 定位到用户位置
+      map.setCenter([lng, lat]);
+
+      // 添加位置图标（Marker）
+      const marker = new AMap.Marker({
+        position: [lng, lat], // 图标位置
+        map: map, // 绑定到地图
+      });
+
+      // 显示定位结果
+      const infoWindow = new AMap.InfoWindow({
+        content: `<div>当前坐标：<br>经度: ${lng}<br>纬度: ${lat}</div>`,
+        offset: new AMap.Pixel(0, -30), // 信息窗口偏移
+      });
+      infoWindow.open(map, [lng, lat]);
+    } else {
+      console.error('定位失败：', result.message);
+      alert('定位失败，请检查定位权限或重试。');
+    }
+  });
+
+  // 添加工具栏
+  AMap.plugin('AMap.ToolBar', () => {
+    const toolbar = new AMap.ToolBar();
+    map.addControl(toolbar);
+  });
+</script>
+</body>
+</html>

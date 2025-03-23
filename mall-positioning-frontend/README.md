@@ -1,39 +1,8 @@
-# mall-positioning-frontend
-
-This template should help get you started developing with Vue 3 in Vite.
-
-## Recommended IDE Setup
-
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
-
-## Type Support for `.vue` Imports in TS
-
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vite.dev/config/).
-
-## Project Setup
-
-```sh
-npm install
-```
-
-### Compile and Hot-Reload for Development
-
-```sh
-npm run dev
-```
-
-### Type-Check, Compile and Minify for Production
-
-```sh
-npm run build
-```
-
-### Lint with [ESLint](https://eslint.org/)
-
-```sh
-npm run lint
-```
+功能实现的先后顺序，需要综合考虑业务流程和用户体验。以下是一个推荐排序：
+1. **设备列表（`List.tsx`）**：这是管理设备的基础，先实现它，方便后续对设备进行各种操作，比如查看详情、绑定和解绑等。同时也能让用户对现有设备有整体认知。
+2. **设备绑定（`Bind.tsx`）**：有了设备列表后，绑定新设备是拓展设备管理范围的关键步骤，让新设备能够接入系统进行后续操作。
+3. **设备详情（`Detail.tsx`）**：绑定设备后，用户需要了解设备具体信息，设备详情页可以展示设备的型号、参数、状态等内容，为设备的使用和维护提供依据。
+4. **实时监控（`Live.tsx`）**：完成设备相关基础功能后，实时监控能让用户及时掌握设备当前运行状态，对设备的正常使用和问题预警很重要。
+5. **历史轨迹（`Track.tsx`）** 和 **历史数据分析（`Analysis.tsx`）** ：这两个功能侧重于对设备历史数据的处理和展示，可稍后实现。它们能帮助用户分析设备的使用情况、性能变化等，为决策提供数据支持。
+6. **多设备监控（`Multi.tsx`）** ：当设备数量较多时，这个功能才显得尤为重要，因此可以靠后开发。
+7. **系统管理（`System.tsx`）** 和 **用户管理（`User.tsx`）** ：属于系统的后台管理功能，优先级相对靠后。但也需要在项目中期左右开始规划实现，以保障系统稳定运行和用户权限管理。 
