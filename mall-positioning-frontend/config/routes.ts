@@ -9,7 +9,14 @@ export default [
       { path: '/user/register', component: './User/Register' },
     ],
   },
+  {
+    path: '/real-time-monitoring',
+    component: './RealTimeMonitoring',
+    name: '实时监控',
+    icon: 'compass',
+    access: 'canUser', // 修改为 canUser
 
+  },
   // 首页
   {
     path: '/welcome',

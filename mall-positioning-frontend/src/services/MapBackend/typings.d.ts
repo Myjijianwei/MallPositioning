@@ -67,6 +67,12 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponseLocationResponseDTO_ = {
+    code?: number;
+    data?: LocationResponseDTO;
+    message?: string;
+  };
+
   type BaseResponseLong_ = {
     code?: number;
     data?: number;
@@ -149,6 +155,11 @@ declare namespace API {
     guardianId?: string;
   };
 
+  type getLatestLocationUsingGETParams = {
+    /** deviceId */
+    deviceId?: string;
+  };
+
   type getNotificationsUsingGETParams = {
     /** userId */
     userId: number;
@@ -195,16 +206,20 @@ declare namespace API {
     userRole?: string;
   };
 
-  type LocationData = {
+  type LocationReportDTO = {
     accuracy?: number;
-    device_id?: string;
+    deviceId?: string;
     guardianId?: number;
-    id?: number;
     latitude?: number;
     longitude?: number;
-    monitorId?: number;
-    source?: string;
-    timestamp?: string;
+  };
+
+  type LocationResponseDTO = {
+    accuracy?: number;
+    createTime?: string;
+    deviceId?: string;
+    latitude?: number;
+    longitude?: number;
   };
 
   type markAllAsReadUsingPOSTParams = {

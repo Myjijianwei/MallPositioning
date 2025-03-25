@@ -11,10 +11,10 @@ import * as notificationController from './notificationController';
 import * as userController from './userController';
 export default {
   fileUploadController,
-  locationDataController,
   notificationController,
   applicationController,
   deviceController,
+  locationDataController,
   msmController,
   userController,
 };

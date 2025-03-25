@@ -2,9 +2,27 @@
 /* eslint-disable */
 import { request } from '@umijs/max';
 
-/** 定位数据 POST /api/api/location */
-export async function locationUsingPost(body: API.LocationData, options?: { [key: string]: any }) {
-  return request<string>('/api/api/location', {
+/** getLatestLocation GET /api/location/latestLocationByDeviceID */
+export async function getLatestLocationUsingGet(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.getLatestLocationUsingGETParams,
+  options?: { [key: string]: any },
+) {
+  return request<API.BaseResponseLocationResponseDTO_>('/api/location/latestLocationByDeviceID', {
+    method: 'GET',
+    params: {
+      ...params,
+    },
+    ...(options || {}),
+  });
+}
+
+/** reportLocation POST /api/location/report */
+export async function reportLocationUsingPost(
+  body: API.LocationReportDTO,
+  options?: { [key: string]: any },
+) {
+  return request<API.BaseResponseString_>('/api/location/report', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

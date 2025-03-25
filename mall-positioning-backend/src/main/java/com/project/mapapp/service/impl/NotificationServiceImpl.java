@@ -24,9 +24,12 @@ public class NotificationServiceImpl extends ServiceImpl<NotificationMapper, Not
         implements NotificationService {
 
     private final DeviceMapper deviceMapper;
+    private final NotificationMapper notificationMapper;
 
-    public NotificationServiceImpl(DeviceMapper deviceMapper) {
+
+    public NotificationServiceImpl(DeviceMapper deviceMapper, NotificationMapper notificationMapper) {
         this.deviceMapper = deviceMapper;
+        this.notificationMapper = notificationMapper;
     }
 
     @Override
@@ -66,6 +69,17 @@ public class NotificationServiceImpl extends ServiceImpl<NotificationMapper, Not
         // 保存通知到数据库
         this.save(notification);
         log.info("站内通知已发送：被监护人ID={}, 消息内容={}", device.getUser_id(), message);
+    }
+
+    @Override
+    public void notifyAdmin(String message,String applicationId) {
+        Notification notification = new Notification();
+        notification.setMessage(message);
+        notification.setIs_read(0);
+        notification.setApplication_id(applicationId);
+        this.save(notification);
+        log.info("站内通知已发送：消息内容={}",  message);
+
     }
 }
 

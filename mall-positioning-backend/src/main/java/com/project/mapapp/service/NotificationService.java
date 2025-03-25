@@ -12,4 +12,6 @@ public interface NotificationService extends IService<Notification> {
 
     void notifyGuardian(String guardianId, String message,String applicationId);
     void notifyWard(String wardDeviceId, String message,String applicationId);
+
+    void notifyAdmin(String message,String applicationId);
 }

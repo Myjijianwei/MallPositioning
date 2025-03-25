@@ -329,7 +329,6 @@ public class UserController {
         return ResultUtils.success(userVOPage);
     }
 
-    private User user = new User();
 
     @PostMapping("getWardByGid")
     public BaseResponse<List<WardRequest>> getWardByGid(int guardianId,HttpServletRequest request) {
