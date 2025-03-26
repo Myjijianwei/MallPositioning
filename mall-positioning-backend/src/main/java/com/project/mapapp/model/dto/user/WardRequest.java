@@ -13,10 +13,14 @@ public class WardRequest {
      */
     private Long id;
 
+    private String deviceId;
+
     /**
      * 关联的用户 ID
      */
     private Long userId;
 
     private String name;
+
+    private String deviceName;
 }

@@ -14,9 +14,11 @@ import com.project.mapapp.common.DeleteRequest;
 import com.project.mapapp.common.ErrorCode;
 import com.project.mapapp.common.ResultUtils;
 import com.project.mapapp.exception.BusinessException;
+import com.project.mapapp.mapper.DeviceMapper;
 import com.project.mapapp.mapper.UserMapper;
 import com.project.mapapp.mapper.WardMapper;
 import com.project.mapapp.model.dto.user.*;
+import com.project.mapapp.model.entity.Device;
 import com.project.mapapp.model.entity.User;
 import com.project.mapapp.model.entity.Ward;
 import com.project.mapapp.model.vo.UserVO;
@@ -63,6 +65,8 @@ public class UserController {
     private WardMapper wardMapper;
     @Autowired
     private UserMapper userMapper;
+    @Autowired
+    private DeviceMapper deviceMapper;
 
 
     @PostMapping("/register")
@@ -353,6 +357,11 @@ public class UserController {
                 if (user != null) {
                     wardRequest.setName(user.getUserName());
                 }
+                QueryWrapper<Device> deviceQueryWrapper = new QueryWrapper<>();
+                deviceQueryWrapper.eq("user_id", ward.getId());
+                Device device = deviceMapper.selectOne(deviceQueryWrapper);
+                wardRequest.setDeviceId(device.getId());
+                wardRequest.setDeviceName(device.getName());
                 wardRequestList.add(wardRequest);
             }
 

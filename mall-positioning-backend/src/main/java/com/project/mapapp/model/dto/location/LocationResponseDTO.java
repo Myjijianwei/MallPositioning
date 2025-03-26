@@ -20,15 +20,4 @@ public class LocationResponseDTO {
     private Date createTime;
     private String deviceId;
 
-
-    // 添加转换方法
-    public static LocationResponseDTO fromEntity(LocationReportDTO entity) {
-        LocationResponseDTO dto = new LocationResponseDTO();
-        dto.setDeviceId(entity.getDeviceId());
-        dto.setLatitude(entity.getLatitude());
-        dto.setLongitude(entity.getLongitude());
-        dto.setAccuracy(entity.getAccuracy());
-        dto.setCreateTime(entity.getCreateTime());
-        return dto;
-    }
 }

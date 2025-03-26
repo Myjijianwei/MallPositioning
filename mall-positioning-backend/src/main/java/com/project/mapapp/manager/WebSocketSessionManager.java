@@ -3,32 +3,93 @@ package com.project.mapapp.manager;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.WebSocketSession;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.*;
+import java.io.IOException;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ScheduledFuture;
 
-// 1. 创建会话管理服务
 @Service
 public class WebSocketSessionManager {
-    // 使用线程安全的嵌套Map：监护人ID -> 设备ID -> 会话
-    private final ConcurrentMap<Long, ConcurrentMap<String, WebSocketSession>> sessions =
-            new ConcurrentHashMap<>();
+    private final ConcurrentMap<Long, ConcurrentMap<String, WebSocketSession>> sessions = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, ScheduledFuture<?>> heartbeatTasks = new ConcurrentHashMap<>();
 
-    // 添加会话
     public void addSession(Long guardianId, String deviceId, WebSocketSession session) {
         sessions.computeIfAbsent(guardianId, k -> new ConcurrentHashMap<>())
-                .put(deviceId, session);
+                .compute(deviceId, (k, oldSession) -> {
+                    if (oldSession != null && oldSession.isOpen()) {
+                        try {
+                            oldSession.close();
+                        } catch (IOException e) {
+                            // Ignore close exception
+                        }
+                    }
+                    return session;
+                });
     }
 
-    // 移除会话
     public void removeSession(Long guardianId, String deviceId) {
-        if (sessions.containsKey(guardianId)) {
-            sessions.get(guardianId).remove(deviceId);
+        if (guardianId == null || deviceId == null) return;
+
+        ConcurrentMap<String, WebSocketSession> deviceSessions = sessions.get(guardianId);
+        if (deviceSessions != null) {
+            WebSocketSession session = deviceSessions.remove(deviceId);
+            if (session != null && session.isOpen()) {
+                try {
+                    session.close();
+                } catch (IOException e) {
+                    // Ignore close exception
+                }
+            }
+
+            // Clean up empty guardian entries
+            if (deviceSessions.isEmpty()) {
+                sessions.remove(guardianId);
+            }
+        }
+
+        // Cancel heartbeat task
+        String taskKey = generateTaskKey(guardianId, deviceId);
+        ScheduledFuture<?> task = heartbeatTasks.remove(taskKey);
+        if (task != null) {
+            task.cancel(false);
         }
     }
 
-    // 获取所有设备会话
     public List<WebSocketSession> getSessions(Long guardianId) {
-        return new ArrayList<>(sessions.getOrDefault(guardianId, new ConcurrentHashMap<>()).values());
+        if (guardianId == null) return Collections.emptyList();
+
+        ConcurrentMap<String, WebSocketSession> deviceSessions = sessions.get(guardianId);
+        return deviceSessions != null ?
+                new CopyOnWriteArrayList<>(deviceSessions.values()) :
+                Collections.emptyList();
+    }
+
+    public void registerHeartbeatTask(Long guardianId, String deviceId, ScheduledFuture<?> task) {
+        if (guardianId == null || deviceId == null || task == null) return;
+        heartbeatTasks.put(generateTaskKey(guardianId, deviceId), task);
+    }
+
+    private String generateTaskKey(Long guardianId, String deviceId) {
+        return guardianId + ":" + deviceId;
+    }
+
+    public void cleanupAll() {
+        sessions.forEach((guardianId, deviceSessions) -> {
+            deviceSessions.forEach((deviceId, session) -> {
+                if (session.isOpen()) {
+                    try {
+                        session.close();
+                    } catch (IOException e) {
+                        // Ignore
+                    }
+                }
+            });
+        });
+        sessions.clear();
+
+        heartbeatTasks.values().forEach(task -> task.cancel(false));
+        heartbeatTasks.clear();
     }
 }

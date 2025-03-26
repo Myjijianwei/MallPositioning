@@ -11,6 +11,7 @@ import com.project.mapapp.service.UserService;
 import com.project.mapapp.service.WebSocketService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
 import org.springframework.http.HttpRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -48,8 +49,9 @@ public class LocationDataController {
 
         if (success) {
             // 主动触发一次推送测试
-            LocationResponseDTO responseDTO = LocationResponseDTO.fromEntity(dto);
-            webSocketService.notifyGuardian(dto.getGuardianId(), responseDTO);
+            LocationResponseDTO locationResponseDTO = new LocationResponseDTO();
+            BeanUtils.copyProperties(dto, locationResponseDTO);
+            webSocketService.notifyGuardian(dto.getGuardianId(), locationResponseDTO);
             return ResultUtils.success("上报成功");
         }
         return ResultUtils.error(ErrorCode.OPERATION_ERROR);
