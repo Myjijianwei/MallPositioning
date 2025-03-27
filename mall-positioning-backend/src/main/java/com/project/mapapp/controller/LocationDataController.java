@@ -11,6 +11,7 @@ import com.project.mapapp.model.dto.location.LocationReportDTO;
 import com.project.mapapp.model.dto.location.LocationResponseDTO;
 import com.project.mapapp.model.entity.Application;
 import com.project.mapapp.model.entity.Device;
+import com.project.mapapp.model.entity.LocationDataTest;
 import com.project.mapapp.service.LocationDataTestService;
 import com.project.mapapp.service.UserService;
 import com.project.mapapp.service.WebSocketService;
@@ -25,6 +26,12 @@ import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import javax.validation.Valid;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/location")
@@ -38,6 +45,7 @@ public class LocationDataController {
     private final WebSocketService webSocketService;
     private final DeviceMapper deviceMapper;
     private final ApplicationMapper applicationMapper;
+    private final LocationDataTestService locationDataTestService;
 
     /**
      * 上报当前位置
@@ -82,5 +90,46 @@ public class LocationDataController {
         Long guardianId = userService.getLoginUser(request).getId();
         LocationResponseDTO response = locationService.getLatestLocation(deviceId, guardianId);
         return ResultUtils.success(response);
+    }
+
+    @GetMapping("/history")
+    public BaseResponse<List<LocationResponseDTO>> getLocationHistory(
+            @RequestParam String deviceId,
+            @RequestParam(required = false) String startTime,
+            @RequestParam(required = false) String endTime,
+            HttpServletRequest request) {
+
+        // 3. 转换时间参数
+        LocalDateTime start = null;
+        LocalDateTime end = null;
+        try {
+            if (startTime != null) {
+                start = LocalDateTime.parse(startTime, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            }
+            if (endTime != null) {
+                end = LocalDateTime.parse(endTime, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            }
+        } catch (DateTimeParseException e) {
+            return ResultUtils.error(ErrorCode.PARAMS_ERROR, "时间格式不正确");
+        }
+
+        // 4. 查询数据库
+        List<LocationDataTest> locations = locationDataTestService.queryHistory(deviceId, start, end);
+
+        // 5. 转换为DTO
+        List<LocationResponseDTO> dtos = locations.stream()
+                .sorted(Comparator.comparing(LocationDataTest::getCreate_time)) // 按时间排序
+                .map(loc -> {
+                    LocationResponseDTO dto = new LocationResponseDTO();
+                    dto.setDeviceId(loc.getDevice_id());
+                    dto.setLongitude(loc.getLongitude());
+                    dto.setLatitude(loc.getLatitude());
+                    dto.setAccuracy(loc.getAccuracy());
+                    dto.setCreateTime(loc.getCreate_time().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+                    return dto;
+                })
+                .collect(Collectors.toList());
+
+        return ResultUtils.success(dtos);
     }
 }

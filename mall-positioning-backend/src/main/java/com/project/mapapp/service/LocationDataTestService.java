@@ -5,6 +5,8 @@ import com.project.mapapp.model.entity.LocationDataTest;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
 
 /**
 * @author jjw
@@ -21,4 +23,6 @@ public interface LocationDataTestService extends IService<LocationDataTest> {
             );
 
     LocationResponseDTO getLatestLocation(String deviceId, Long guardianId);
+
+    List<LocationDataTest> queryHistory(String deviceId, LocalDateTime start, LocalDateTime end);
 }

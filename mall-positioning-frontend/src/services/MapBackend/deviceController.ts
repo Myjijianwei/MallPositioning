@@ -54,6 +54,21 @@ export async function getGuardianDevicesUsingGet(
   });
 }
 
+/** getMySelfDeviceInfo GET /api/device/getMySelfDeviceInfo */
+export async function getMySelfDeviceInfoUsingGet(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.getMySelfDeviceInfoUsingGETParams,
+  options?: { [key: string]: any },
+) {
+  return request<API.BaseResponseDeviceInfo_>('/api/device/getMySelfDeviceInfo', {
+    method: 'GET',
+    params: {
+      ...params,
+    },
+    ...(options || {}),
+  });
+}
+
 /** getWardDevice GET /api/device/getWardDeviceByGuardId/${param0} */
 export async function getWardDeviceUsingGet(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
@@ -61,14 +76,11 @@ export async function getWardDeviceUsingGet(
   options?: { [key: string]: any },
 ) {
   const { guardianId: param0, ...queryParams } = params;
-  return request<API.BaseResponseListWardDeviceInfo_>(
-    `/api/device/getWardDeviceByGuardId/${param0}`,
-    {
-      method: 'GET',
-      params: { ...queryParams },
-      ...(options || {}),
-    },
-  );
+  return request<API.BaseResponseListDeviceInfo_>(`/api/device/getWardDeviceByGuardId/${param0}`, {
+    method: 'GET',
+    params: { ...queryParams },
+    ...(options || {}),
+  });
 }
 
 /** listAllDevice GET /api/device/listAllDevice */

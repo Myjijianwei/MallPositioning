@@ -54,7 +54,7 @@ export default [
     path: '/history',
     icon: 'compass',
     name: '历史轨迹',
-    access: 'canGuard',
+    access: 'canUser',
     routes: [
       {
         path: '/history/track/:deviceId',

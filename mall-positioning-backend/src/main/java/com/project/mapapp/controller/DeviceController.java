@@ -2,7 +2,6 @@ package com.project.mapapp.controller;
 
 
 import cn.hutool.core.util.ObjUtil;
-import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.project.mapapp.annotation.AuthCheck;
 import com.project.mapapp.common.BaseResponse;
@@ -17,7 +16,7 @@ import com.project.mapapp.mapper.WardMapper;
 import com.project.mapapp.model.dto.device.DeviceBindRequest;
 import com.project.mapapp.model.dto.device.DeviceQueryRequest;
 import com.project.mapapp.model.dto.device.DeviceUpdateRequest;
-import com.project.mapapp.model.dto.device.WardDeviceInfo;
+import com.project.mapapp.model.dto.device.DeviceInfo;
 import com.project.mapapp.model.entity.Application;
 import com.project.mapapp.model.entity.Device;
 import com.project.mapapp.model.entity.User;
@@ -96,16 +95,16 @@ public class DeviceController {
      * @return
      */
     @GetMapping("/getWardDeviceByGuardId/{guardianId}")
-    public BaseResponse<List<WardDeviceInfo>> getWardDevice(@PathVariable String guardianId, HttpServletRequest request){
+    public BaseResponse<List<DeviceInfo>> getWardDevice(@PathVariable String guardianId, HttpServletRequest request){
         ThrowUtils.throwIf(ObjUtil.isEmpty(guardianId),ErrorCode.PARAMS_ERROR);
         QueryWrapper<Application> applicationQueryWrapper = new QueryWrapper<>();
         applicationQueryWrapper.eq("guardian_id", guardianId);
         List<Application> applications = applicationMapper.selectList(applicationQueryWrapper);
-        List<WardDeviceInfo> deviceQueryRequestList=new ArrayList<>();
+        List<DeviceInfo> deviceQueryRequestList=new ArrayList<>();
         for (Application application : applications) {
             //只有通过的申请才是为绑定成功
             if(application.getStatus().equals(ApplicationStatus.APPROVED.getCode())){
-                WardDeviceInfo wardDeviceInfo = new WardDeviceInfo();
+                DeviceInfo wardDeviceInfo = new DeviceInfo();
 
                 Device device = deviceMapper.selectById(application.getWard_device_id());
                 wardDeviceInfo.setDeviceId(device.getId());
@@ -169,6 +168,22 @@ public class DeviceController {
         queryWrapper.eq("user_id", guardianId);
         Device device = deviceMapper.selectOne(queryWrapper);
         return ResultUtils.success(device);
+    }
+
+    @GetMapping("/getMySelfDeviceInfo")
+    public BaseResponse<DeviceInfo> getMySelfDeviceInfo(int id,HttpServletRequest request) {
+        QueryWrapper<Device> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("user_id", userService.getLoginUser(request).getId());
+        Device devices = deviceMapper.selectOne(queryWrapper);
+        DeviceInfo deviceInfo = new DeviceInfo();
+        deviceInfo.setDeviceId(devices.getId());
+        deviceInfo.setDeviceName(devices.getName());
+        QueryWrapper<Application> applicationQueryWrapper = new QueryWrapper<>();
+        applicationQueryWrapper.eq("ward_device_id", devices.getId());
+        Application application = applicationMapper.selectOne(applicationQueryWrapper);
+        deviceInfo.setGuardianId(Long.valueOf(application.getGuardian_id()));
+        deviceInfo.setGuardianName(userMapper.selectById(application.getGuardian_id()).getUserName());
+        return ResultUtils.success(deviceInfo);
     }
 
     /**

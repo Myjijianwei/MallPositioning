@@ -8,7 +8,7 @@ import java.io.Serializable;
 import java.util.Date;
 
 @Data
-public class WardDeviceInfo extends PageRequest implements Serializable {
+public class DeviceInfo extends PageRequest implements Serializable {
     /**
      * 设备ID
      */

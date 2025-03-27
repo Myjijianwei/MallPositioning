@@ -1,4 +1,6 @@
+// src/components/StableAMap.tsx
 import React, { useEffect, useRef, useState } from 'react';
+import dayjs from 'dayjs';
 
 declare global {
   interface Window {
@@ -16,21 +18,25 @@ interface StableAMapProps {
     longitude: number;
     latitude: number;
     accuracy?: number;
+    timestamp?: string;
   }>;
   center?: { longitude: number; latitude: number };
   zoom?: number;
+  showPath?: boolean;
 }
 
 const StableAMap: React.FC<StableAMapProps> = ({
                                                  devices = [],
                                                  center,
-                                                 zoom = 15
+                                                 zoom = 15,
+                                                 showPath = false
                                                }) => {
   const mapRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
+  const pathRef = useRef<any>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
-  const firstLoadRef = useRef(true);
 
+  // 初始化地图（保持不变）
   useEffect(() => {
     if (window.AMap) {
       initMap();
@@ -42,7 +48,7 @@ const StableAMap: React.FC<StableAMapProps> = ({
     };
 
     const script = document.createElement('script');
-    script.src = `https://webapi.amap.com/maps?v=2.0&key=1170acb8a7694eab86d82b306f5f5bd2&plugin=AMap.Geolocation,AMap.Scale`;
+    script.src = `https://webapi.amap.com/maps?v=2.0&key=1170acb8a7694eab86d82b306f5f5bd2&plugin=AMap.Geolocation,AMap.Scale,AMap.Polyline`;
     script.async = true;
 
     script.onload = () => {
@@ -51,10 +57,6 @@ const StableAMap: React.FC<StableAMapProps> = ({
       } else {
         console.error('AMap未正确加载');
       }
-    };
-
-    script.onerror = () => {
-      console.error('加载AMap脚本失败');
     };
 
     document.head.appendChild(script);
@@ -71,7 +73,7 @@ const StableAMap: React.FC<StableAMapProps> = ({
   const initMap = () => {
     const defaultCenter = [116.397428, 39.90923];
     const map = new window.AMap.Map('map-container', {
-      zoom: 5,
+      zoom: zoom,
       center: defaultCenter,
       viewMode: '3D',
       showIndoorMap: true,
@@ -83,122 +85,91 @@ const StableAMap: React.FC<StableAMapProps> = ({
     setMapLoaded(true);
   };
 
+  // 更新地图标记和轨迹
   useEffect(() => {
     if (!mapLoaded || !mapRef.current) return;
 
-    markersRef.current.forEach(marker => {
-      mapRef.current.remove(marker);
-    });
+    // 清除旧标记和路径
+    markersRef.current.forEach(marker => mapRef.current.remove(marker));
     markersRef.current = [];
 
-    if (devices.length === 0 && !center) {
-      return;
+    if (pathRef.current) {
+      mapRef.current.remove(pathRef.current);
+      pathRef.current = null;
     }
 
-    const validDevices = devices.filter(d => d.longitude && d.latitude);
-    validDevices.forEach(device => {
+    if (devices.length === 0 && !center) return;
+
+    // 创建轨迹路径
+    if (showPath && devices.length > 1) {
+      const path = devices.map(d => [d.longitude, d.latitude]);
+      pathRef.current = new window.AMap.Polyline({
+        path: path,
+        isOutline: true,
+        outlineColor: '#ffeeff',
+        borderWeight: 1,
+        strokeColor: '#1890ff',
+        strokeOpacity: 0.8,
+        strokeWeight: 5,
+        lineJoin: 'round',
+        lineCap: 'round'
+      });
+      pathRef.current.setMap(mapRef.current);
+      markersRef.current.push(pathRef.current);
+    }
+
+    // 创建简洁的标记点（只显示小圆点）
+    devices.forEach(device => {
       const position = new window.AMap.LngLat(device.longitude, device.latitude);
 
+      // 创建简洁标记
       const marker = new window.AMap.Marker({
         position: position,
-        content: createMarkerContent(device),
+        content: `
+          <div style="
+            width: 12px;
+            height: 12px;
+            background: #1890ff;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+          "></div>
+        `,
         map: mapRef.current,
-        offset: new window.AMap.Pixel(-15, -40)
+        offset: new window.AMap.Pixel(-6, -6) // 精确居中
       });
 
-      const circle = new window.AMap.Circle({
-        center: position,
-        radius: device.accuracy || 10,
-        strokeColor: "#1890ff",
-        strokeOpacity: 0.3,
-        strokeWeight: 1,
-        fillColor: "#1890ff",
-        fillOpacity: 0.1
-      });
-      circle.setMap(mapRef.current);
+      // 可选：保留精度范围圆（如需更简洁可移除）
+      if (device.accuracy && false) { // 设置为false不显示精度圈
+        const circle = new window.AMap.Circle({
+          center: position,
+          radius: device.accuracy,
+          strokeColor: "#1890ff",
+          strokeOpacity: 0.3,
+          strokeWeight: 1,
+          fillColor: "#1890ff",
+          fillOpacity: 0.1
+        });
+        circle.setMap(mapRef.current);
+        markersRef.current.push(circle);
+      }
 
-      markersRef.current.push(marker, circle);
+      markersRef.current.push(marker);
     });
 
-    const calculateView = () => {
-      if (center) {
-        return {
-          center: [center.longitude, center.latitude],
-          zoom: zoom
-        };
-      } else if (validDevices.length > 0) {
-        const points = validDevices.map(d => [d.longitude, d.latitude]);
-        return {
-          bounds: new window.AMap.Bounds(
-            [Math.min(...points.map(p => p[0])), Math.min(...points.map(p => p[1]))],
-            [Math.max(...points.map(p => p[0])), Math.max(...points.map(p => p[1]))]
-          ),
-          zoom: null
-        };
-      } else {
-        return {
-          center: [116.397428, 39.90923],
-          zoom: 5
-        };
-      }
-    };
-
-    const viewConfig = calculateView();
-
-    if (firstLoadRef.current) {
-      if (viewConfig.bounds) {
-        mapRef.current.setBounds(viewConfig.bounds, true, [60, 60, 60, 60]);
-      } else {
-        mapRef.current.setCenter(viewConfig.center);
-        mapRef.current.setZoom(viewConfig.zoom || zoom);
-      }
-      firstLoadRef.current = false;
-    } else {
-      if (viewConfig.bounds) {
-        mapRef.current.setFitView(
-          markersRef.current.filter(m => m.getPosition),
-          true,
-          [60, 60, 60, 60],
-          100
-        );
-      } else {
-        // 修复点：使用分开的 setCenter 和 setZoom 方法
-        mapRef.current.setCenter(viewConfig.center);
-        mapRef.current.setZoom(viewConfig.zoom || zoom);
-      }
+    // 调整视图
+    if (center) {
+      mapRef.current.setCenter([center.longitude, center.latitude]);
+      mapRef.current.setZoom(zoom);
+    } else if (devices.length > 0) {
+      mapRef.current.setFitView(
+        markersRef.current.filter(m => m.getPosition),
+        true,
+        [60, 60, 60, 60],
+        100
+      );
     }
-  }, [devices, center, mapLoaded, zoom]);
-
-  const createMarkerContent = (device: any) => {
-    return `
-      <div style="
-        background: white;
-        padding: 8px;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-        min-width: 140px;
-        transform: translate(-50%, -100%);
-      ">
-        <div style="
-          font-size: 14px;
-          color: #fff;
-          background: #1890ff;
-          padding: 4px 8px;
-          border-radius: 4px;
-          white-space: nowrap;
-        ">
-          ${device.name || '未知设备'}
-        </div>
-        <div style="
-          width: 24px;
-          height: 24px;
-          background: url(https://webapi.amap.com/theme/v1.3/markers/n/mark_b.png)
-            center/contain no-repeat;
-          margin: 8px auto;
-        "></div>
-      </div>
-    `;
-  };
+  }, [devices, center, mapLoaded, zoom, showPath]);
 
   return (
     <div id="map-container" style={{ width: '100%', height: '100%' }}>

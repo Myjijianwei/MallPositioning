@@ -13,6 +13,8 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
 
 /**
 * @author jjw
@@ -69,6 +71,27 @@ public class LocationDataTestServiceImpl extends ServiceImpl<LocationDataTestMap
         return convertToResponseDTO(location);
     }
 
+    @Override
+    public List<LocationDataTest> queryHistory(String deviceId, LocalDateTime startTime, LocalDateTime endTime) {
+        QueryWrapper<LocationDataTest> queryWrapper = new QueryWrapper<>();
+
+        // 设备ID条件
+        queryWrapper.eq("device_id", deviceId);
+
+        // 时间范围条件
+        if (startTime != null) {
+            queryWrapper.ge("create_time", startTime);
+        }
+        if (endTime != null) {
+            queryWrapper.le("create_time", endTime);
+        }
+
+        // 按时间升序排序
+        queryWrapper.orderByAsc("create_time");
+
+        return this.list(queryWrapper);
+    }
+
     private LocationResponseDTO convertToResponseDTO(LocationDataTest location) {
         if (location == null) return null;
 
@@ -77,7 +100,7 @@ public class LocationDataTestServiceImpl extends ServiceImpl<LocationDataTestMap
         dto.setLongitude(location.getLongitude());
         dto.setAccuracy(location.getAccuracy());
         dto.setDeviceId(location.getDevice_id());
-        dto.setCreateTime(location.getCreate_time());
+        dto.setCreateTime(String.valueOf(location.getCreate_time()));
         return dto;
     }
 

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Date;
 import lombok.Data;
 
@@ -53,5 +54,5 @@ public class LocationDataTest {
     /**
      * 记录时间
      */
-    private Date create_time;
+    private LocalDateTime create_time;
 }

@@ -17,7 +17,7 @@ public class LocationResponseDTO {
     private BigDecimal latitude;
     private BigDecimal longitude;
     private BigDecimal accuracy;
-    private Date createTime;
+    private String createTime;
     private String deviceId;
 
 }

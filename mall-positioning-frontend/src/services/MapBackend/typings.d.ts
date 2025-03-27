@@ -31,6 +31,12 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponseDeviceInfo_ = {
+    code?: number;
+    data?: DeviceInfo;
+    message?: string;
+  };
+
   type BaseResponseInt_ = {
     code?: number;
     data?: number;
@@ -49,9 +55,21 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponseListDeviceInfo_ = {
+    code?: number;
+    data?: DeviceInfo[];
+    message?: string;
+  };
+
   type BaseResponseListDeviceQueryRequest_ = {
     code?: number;
     data?: DeviceQueryRequest[];
+    message?: string;
+  };
+
+  type BaseResponseListLocationResponseDTO_ = {
+    code?: number;
+    data?: LocationResponseDTO[];
     message?: string;
   };
 
@@ -64,12 +82,6 @@ declare namespace API {
   type BaseResponseListUserVO_ = {
     code?: number;
     data?: UserVO[];
-    message?: string;
-  };
-
-  type BaseResponseListWardDeviceInfo_ = {
-    code?: number;
-    data?: WardDeviceInfo[];
     message?: string;
   };
 
@@ -150,6 +162,24 @@ declare namespace API {
     status?: number;
   };
 
+  type DeviceInfo = {
+    created_at?: string;
+    current?: number;
+    deviceId?: string;
+    deviceName?: string;
+    device_description?: string;
+    emergencyContact?: string;
+    guardianId?: number;
+    guardianName?: string;
+    pageSize?: number;
+    relationship?: string;
+    sortField?: string;
+    sortOrder?: string;
+    userAge?: number;
+    wardId?: number;
+    wardName?: string;
+  };
+
   type DeviceQueryRequest = {
     created_at?: string;
     current?: number;
@@ -188,6 +218,20 @@ declare namespace API {
   type getLatestLocationUsingGETParams = {
     /** deviceId */
     deviceId?: string;
+  };
+
+  type getLocationHistoryUsingGETParams = {
+    /** deviceId */
+    deviceId: string;
+    /** endTime */
+    endTime?: string;
+    /** startTime */
+    startTime?: string;
+  };
+
+  type getMySelfDeviceInfoUsingGETParams = {
+    /** id */
+    id?: number;
   };
 
   type getNotificationsUsingGETParams = {
@@ -379,24 +423,6 @@ declare namespace API {
     userName?: string;
     userProfile?: string;
     userRole?: string;
-  };
-
-  type WardDeviceInfo = {
-    created_at?: string;
-    current?: number;
-    deviceId?: string;
-    deviceName?: string;
-    device_description?: string;
-    emergencyContact?: string;
-    guardianId?: number;
-    guardianName?: string;
-    pageSize?: number;
-    relationship?: string;
-    sortField?: string;
-    sortOrder?: string;
-    userAge?: number;
-    wardId?: number;
-    wardName?: string;
   };
 
   type WardInfo = {
