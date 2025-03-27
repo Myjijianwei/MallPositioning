@@ -67,6 +67,12 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponseListGeoFence_ = {
+    code?: number;
+    data?: GeoFence[];
+    message?: string;
+  };
+
   type BaseResponseListLocationResponseDTO_ = {
     code?: number;
     data?: LocationResponseDTO[];
@@ -178,6 +184,8 @@ declare namespace API {
     userAge?: number;
     wardId?: number;
     wardName?: string;
+    latitude?: number;
+    longitude?: number;
   };
 
   type DeviceQueryRequest = {
@@ -198,6 +206,24 @@ declare namespace API {
     device_description?: string;
     id?: string;
     name?: string;
+  };
+
+  type GeoFence = {
+    coordinates?: Record<string, any>;
+    created_at?: string;
+    device_id?: string;
+    id?: number;
+    name?: string;
+    updated_at?: string;
+    user_id?: string;
+  };
+
+  type GeoFenceCreateRequest = {
+    coordinates?: number[][];
+    deviceId?: string;
+    id?: string;
+    name?: string;
+    userId?: string;
   };
 
   type getApplicationsByGidUsingPOSTParams = {
@@ -262,6 +288,11 @@ declare namespace API {
   type getWardInfoUsingGETParams = {
     /** wardId */
     wardId?: string;
+  };
+
+  type listFencesUsingGETParams = {
+    /** deviceId */
+    deviceId: string;
   };
 
   type listUserByPageUsingGETParams = {

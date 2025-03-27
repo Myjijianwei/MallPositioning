@@ -48,7 +48,14 @@ export default [
     component: './Monitor/Live',
 
   },
+  {
+    path: '/fence',
+    icon: 'home',
+    name: '地理栅栏',
+    access: 'canGuard',
+    component: './Fence/index',
 
+  },
   // 历史轨迹
   {
     path: '/history',

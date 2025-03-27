@@ -1,7 +1,11 @@
 package com.project.mapapp.service;
 
+import com.project.mapapp.common.BaseResponse;
+import com.project.mapapp.model.dto.geofence.GeoFenceCreateRequest;
 import com.project.mapapp.model.entity.GeoFence;
 import com.baomidou.mybatisplus.extension.service.IService;
+
+import java.util.List;
 
 /**
 * @author jjw
@@ -10,4 +14,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 */
 public interface GeoFenceService extends IService<GeoFence> {
 
+    Boolean createGeoFence(GeoFenceCreateRequest getGeoFenceCreateRequest);
+
+    List<GeoFence> listFences(String deviceId, Long id);
 }

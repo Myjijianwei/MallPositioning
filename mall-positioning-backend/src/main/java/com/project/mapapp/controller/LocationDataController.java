@@ -57,7 +57,7 @@ public class LocationDataController {
         queryWrapper.eq("user_id",dto.getWardId());
         String deviceId = deviceMapper.selectOne(queryWrapper).getId();
         dto.setDeviceId(deviceId);
-        //ward_device_id
+
         QueryWrapper<Application> applicationQueryWrapper = new QueryWrapper<>();
         applicationQueryWrapper.eq("ward_device_id",deviceId);
         Long guardianId = Long.valueOf(applicationMapper.selectOne(applicationQueryWrapper).getGuardian_id());

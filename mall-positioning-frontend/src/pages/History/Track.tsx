@@ -26,7 +26,7 @@ import { useModel } from '@umijs/max';
 import { history } from 'umi';
 import StableAMap from '@/components/StableAMap';
 import {
-  getDeviceByIdUsingGet, getMySelfDeviceInfoUsingGet,
+  getMySelfDeviceInfoUsingGet,
   getWardDeviceUsingGet,
 } from '@/services/MapBackend/deviceController';
 import { downloadCSV } from '@/utils/fileDownload';
@@ -212,6 +212,7 @@ const HistoryPage: React.FC = () => {
   return (
     <PageContainer
       title="历史轨迹查询"
+      // @ts-ignore
       breadcrumb={{ items: [{ title: '首页', path: '/' }, { title: '历史轨迹' }] }}
       extra={[
         <Button

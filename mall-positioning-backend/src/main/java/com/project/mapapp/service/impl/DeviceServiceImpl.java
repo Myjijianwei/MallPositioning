@@ -131,6 +131,15 @@ public class DeviceServiceImpl extends ServiceImpl<DeviceMapper, Device>
         return device != null;
     }
 
+    @Override
+    public boolean validateDeviceOwnership(String userId, String deviceId) {
+        QueryWrapper<Device> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("device_id", deviceId);
+        queryWrapper.eq("user_id", userId);
+        Long l = deviceMapper.selectCount(queryWrapper);
+        return l != null && l > 0;
+    }
+
 
 }
 
