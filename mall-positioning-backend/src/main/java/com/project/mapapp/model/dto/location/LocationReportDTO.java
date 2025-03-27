@@ -13,6 +13,7 @@ import java.util.Date;
 public class LocationReportDTO {
     private String deviceId;
     private Long guardianId;
+    private Long wardId;
     @NotNull(message = "纬度不能为空")
     @DecimalMin(value = "-90.0", message = "纬度最小为-90")
     @DecimalMax(value = "90.0", message = "纬度最大为90")

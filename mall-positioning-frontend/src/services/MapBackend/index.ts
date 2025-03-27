@@ -9,6 +9,7 @@ import * as locationDataController from './locationDataController';
 import * as msmController from './msmController';
 import * as notificationController from './notificationController';
 import * as userController from './userController';
+import * as wardController from './wardController';
 export default {
   fileUploadController,
   notificationController,
@@ -17,4 +18,5 @@ export default {
   locationDataController,
   msmController,
   userController,
+  wardController,
 };

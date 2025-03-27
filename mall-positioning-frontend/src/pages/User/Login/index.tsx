@@ -14,14 +14,13 @@ import {
 } from '@ant-design/pro-components';
 import { history, useModel } from '@umijs/max';
 import { Alert, message, Tabs } from 'antd';
-import React, { useState } from'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useForm } from 'antd/es/form/Form';
 import Footer from '@/components/Footer';
-import styles from './index.less'; // 使用 CSS Modules
+import styles from './index.less';
 import { useNavigate } from 'react-router-dom';
-import {userLoginUsingPost} from "@/services/backend/userController";
-import {loginByEmailUsingPost} from "@/services/MapBackend/userController";
-import {sendEmailUsingGet} from "@/services/MapBackend/msmController";
+import { loginByEmailUsingPost, userLoginUsingPost } from '@/services/MapBackend/userController';
+import { sendEmailUsingGet } from "@/services/MapBackend/msmController";
 
 const ActionIcons = () => {
   return (
@@ -53,6 +52,13 @@ const Login: React.FC = () => {
   const [type, setType] = useState<string>('account');
   const { setInitialState } = useModel('@@initialState');
   const [form] = useForm();
+  const isMounted = useRef(true); // 修复内存泄漏问题
+
+  useEffect(() => {
+    return () => {
+      isMounted.current = false; // 组件卸载时标记
+    };
+  }, []);
 
   const navigate = useNavigate();
   const handleSubmit = async (values: any) => {
@@ -63,17 +69,20 @@ const Login: React.FC = () => {
       } else if (type === 'email') {
         res = await loginByEmailUsingPost(values);
       }
-      if (res?.data) {
+      if (res?.data && isMounted.current) {
         message.success('登录成功！');
         // @ts-ignore
-        localStorage.setItem('userId', res?.data?.id);
-        navigate('/welcome'); // 使用 navigate 进行跳转
+        localStorage.setItem('userId', res.data.id);
+        navigate('/welcome');
+        // @ts-ignore
         setInitialState({
           loginUser: res.data,
         });
       }
     } catch (error) {
-      message.error('登录失败，请重试！');
+      if (isMounted.current) {
+        message.error('登录失败，请重试！');
+      }
     }
   };
 
@@ -126,6 +135,8 @@ const Login: React.FC = () => {
                 fieldProps={{
                   size: 'large',
                   prefix: <UserOutlined />,
+                  autoComplete: 'username', // 修复自动完成警告
+                  id: 'userAccount',
                 }}
                 placeholder="用户名: admin or user"
                 rules={[
@@ -140,6 +151,8 @@ const Login: React.FC = () => {
                 fieldProps={{
                   size: 'large',
                   prefix: <LockOutlined />,
+                  autoComplete: 'current-password',
+                  id: 'userPassword',
                 }}
                 placeholder="密码: ant.design"
                 rules={[
@@ -158,6 +171,8 @@ const Login: React.FC = () => {
                 fieldProps={{
                   size: 'large',
                   prefix: <MobileOutlined />,
+                  autoComplete: 'email',
+                  id: 'email',
                 }}
                 name="email"
                 placeholder="请输入邮箱号！"
@@ -176,6 +191,7 @@ const Login: React.FC = () => {
                 fieldProps={{
                   size: 'large',
                   prefix: <LockOutlined />,
+                  autoComplete: 'one-time-code',
                 }}
                 captchaTextRender={(timing, count) => {
                   if (timing) {
@@ -218,7 +234,7 @@ const Login: React.FC = () => {
               style={{
                 float: 'right',
               }}
-              onClick={() => history.push('/forgot-password')} // 跳转到忘记密码页面
+              onClick={() => history.push('/forgot-password')}
             >
               忘记密码 ?
             </a>

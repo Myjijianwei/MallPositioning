@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, history } from 'umi';
 import { Button, Form, Input, message, Card } from 'antd';
-import { getDeviceByIdUsingGet, updateDeviceUsingPost } from '@/services/MapBackend/deviceController';
+import {
+  getDeviceByIdUsingGet,
+  getDeviceByIdUsingGet1,
+  updateDeviceUsingPost,
+} from '@/services/MapBackend/deviceController';
 
 const DeviceEditPage: React.FC = () => {
   const { id } = useParams<{ id: string }>(); // 获取设备 ID
@@ -11,10 +15,11 @@ const DeviceEditPage: React.FC = () => {
 
   // 获取设备信息
   useEffect(() => {
+    console.log('获取到的设备ID:', id);
     const fetchDeviceInfo = async () => {
       setLoading(true);
       try {
-        const response = await getDeviceByIdUsingGet({ id });
+        const response = await getDeviceByIdUsingGet1({ id });
         if (response.code === 0 && response.data) {
           setDeviceInfo(response.data);
           form.setFieldsValue(response.data); // 填充表单

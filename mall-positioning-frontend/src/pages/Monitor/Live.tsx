@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { PageContainer } from '@ant-design/pro-components';
 import { Card, Typography, Space, Select, Button, message, Spin } from 'antd';
 import styled from 'styled-components';
 import StableAMap from '@/components/StableAMap';
 import { useStableWebSocket } from '@/hooks/useStableWebSocket';
 import { getWardByGidUsingPost } from '@/services/MapBackend/userController';
+import { useModel } from 'umi';
 
 const { Text } = Typography;
 const { Option } = Select;
@@ -21,18 +22,21 @@ const MonitorCard = styled(Card)`
 `;
 
 const LiveMonitor = () => {
+  const { initialState } = useModel('@@initialState');
+  const { loginUser } = initialState || {};
+
   const [devices, setDevices] = useState<Record<string, any>>({});
   const [deviceList, setDeviceList] = useState<Array<{ id: string; name: string }>>([]);
   const [selectedDevice, setSelectedDevice] = useState<string>('');
   const [showAll, setShowAll] = useState(true);
   const [currentPos, setCurrentPos] = useState<{ longitude: number; latitude: number } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isSwitching, setIsSwitching] = useState(false);
 
-  // 获取设备列表
   const fetchDevices = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await getWardByGidUsingPost({ guardianId: 5 });
+      const res = await getWardByGidUsingPost({ guardianId: loginUser?.id });
       if (res.code === 0 && res.data) {
         const formattedDevices = res.data.map((d: any) => ({
           id: d.deviceId?.toString() || '',
@@ -41,7 +45,17 @@ const LiveMonitor = () => {
 
         setDeviceList(formattedDevices);
 
-        // 自动选择第一个有效设备
+        // 更新现有设备名称
+        setDevices(prev => {
+          const updated = {...prev};
+          formattedDevices.forEach((d: any) => {
+            if (updated[d.id]) {
+              updated[d.id].name = d.name;
+            }
+          });
+          return updated;
+        });
+
         if (formattedDevices.length > 0 && !selectedDevice) {
           setSelectedDevice(formattedDevices[0].id);
         }
@@ -54,9 +68,8 @@ const LiveMonitor = () => {
     } finally {
       setLoading(false);
     }
-  }, [selectedDevice]);
+  }, [selectedDevice, loginUser?.id]);
 
-  // WebSocket处理
   const handleWebSocketMessage = useCallback((data: any) => {
     if (!data?.deviceId) return;
 
@@ -65,28 +78,59 @@ const LiveMonitor = () => {
       return;
     }
 
+    const deviceName = deviceList.find(d => d.id === data.deviceId)?.name;
+
     setDevices((prev) => ({
       ...prev,
       [data.deviceId]: {
         ...data,
+        name: deviceName || `设备 ${data.deviceId}`,
         timestamp: Date.now(),
       },
     }));
-  }, []);
+  }, [deviceList]);
 
-  const { status, reconnect } = useStableWebSocket(
-    selectedDevice
-      ? `ws://localhost:8001/api/gps-websocket?guardianId=5&deviceId=${encodeURIComponent(selectedDevice)}`
-      : null,
-    {
-      onMessage: handleWebSocketMessage,
-      onReconnect: (attempt) => {
-        console.log(`正在第${attempt}次重连...`);
+  const wsUrl = useMemo(() => {
+    if (!selectedDevice || !loginUser?.id) return null;
+    try {
+      const url = new URL('ws://localhost:8001/api/gps-websocket');
+      url.searchParams.set('wardId', loginUser.id.toString());
+      url.searchParams.set('deviceId', selectedDevice);
+      return url.toString();
+    } catch (e) {
+      console.error('构建URL失败:', e);
+      return null;
+    }
+  }, [selectedDevice, loginUser?.id]);
+
+  const wsOptions = useMemo(() => ({
+    onMessage: handleWebSocketMessage,
+    heartbeatInterval: 30000,
+    onError: (error: Event) => {
+      console.error('WebSocket错误:', error);
+      message.error('连接发生错误');
+    },
+    onReconnect: (attempt: number) => {
+      console.log(`第${attempt}次重连...`);
+      if (attempt >= 5) {
+        message.warning('连接已断开，请检查网络后刷新页面');
       }
     }
-  );
+  }), [handleWebSocketMessage]);
 
-  // 获取当前位置
+  const { status, reconnect, close } = useStableWebSocket(wsUrl, wsOptions);
+
+  const handleDeviceChange = useCallback(async (deviceId: string) => {
+    setIsSwitching(true);
+    try {
+      close(1000, '设备切换');
+      await new Promise(resolve => setTimeout(resolve, 300));
+      setSelectedDevice(deviceId);
+    } finally {
+      setIsSwitching(false);
+    }
+  }, [close]);
+
   const handleLocate = useCallback(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -105,24 +149,16 @@ const LiveMonitor = () => {
     }
   }, []);
 
-  // 手动刷新设备列表
-  const handleRefreshDevices = useCallback(() => {
-    fetchDevices();
-  }, [fetchDevices]);
-
-  // 初始化加载设备列表
   useEffect(() => {
-    fetchDevices();
-  }, [fetchDevices]);
+    const init = async () => {
+      await fetchDevices();
+      if (selectedDevice) {
+        reconnect();
+      }
+    };
+    init();
+  }, []);
 
-  // 设备选择变化时重新连接
-  useEffect(() => {
-    if (selectedDevice) {
-      reconnect();
-    }
-  }, [selectedDevice, reconnect]);
-
-  // 准备显示的数据
   const displayDevices = Object.values(devices).filter((d) =>
     showAll || d.deviceId === selectedDevice
   );
@@ -131,6 +167,7 @@ const LiveMonitor = () => {
     <PageContainer
       title="实时位置监控"
       breadcrumb={{
+        // @ts-ignore
         items: [
           { title: '首页', path: '/' },
           { title: '实时监控' },
@@ -143,7 +180,7 @@ const LiveMonitor = () => {
         <Button
           key="refresh"
           type="default"
-          onClick={handleRefreshDevices}
+          onClick={fetchDevices}
           loading={loading}
         >
           刷新设备列表
@@ -159,7 +196,7 @@ const LiveMonitor = () => {
         </span>,
       ]}
     >
-      <Spin spinning={loading} tip="加载中...">
+      <Spin spinning={loading || isSwitching} tip={isSwitching ? '设备切换中...' : '加载中...'}>
         <div style={{ display: 'flex', gap: 16, height: 'calc(100vh - 180px)' }}>
           <div style={{ flex: 1 }}>
             <StableAMap
@@ -175,12 +212,12 @@ const LiveMonitor = () => {
               <Select
                 placeholder={loading ? "加载设备中..." : "选择设备"}
                 style={{ width: '100%' }}
-                onChange={(value) => setSelectedDevice(value as string)}
+                onChange={handleDeviceChange}
                 value={selectedDevice || undefined}
                 showSearch
                 optionFilterProp="children"
-                loading={loading}
-                disabled={loading || deviceList.length === 0}
+                loading={loading || isSwitching}
+                disabled={loading || isSwitching || deviceList.length === 0}
               >
                 {deviceList.map((device) => (
                   <Option
@@ -203,7 +240,7 @@ const LiveMonitor = () => {
                 type={showAll ? 'default' : 'primary'}
                 onClick={() => setShowAll(!showAll)}
                 block
-                disabled={!selectedDevice}
+                disabled={!selectedDevice || isSwitching}
               >
                 {showAll ? '聚焦选中设备' : '显示所有设备'}
               </Button>
@@ -226,7 +263,7 @@ const LiveMonitor = () => {
                           borderRadius: 4,
                           cursor: 'pointer',
                         }}
-                        onClick={() => setSelectedDevice(device.id)}
+                        onClick={() => handleDeviceChange(device.id)}
                       >
                         <Text strong>{device.name}</Text>
                         {data ? (

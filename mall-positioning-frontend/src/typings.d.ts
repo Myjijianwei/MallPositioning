@@ -55,11 +55,9 @@ interface BaseResponse<T> {
   message?: string;
 }
 
-
 /**
  * 全局状态类型
  */
 interface InitialState {
-  settings: any;
   loginUser?: API.UserVO;
 }

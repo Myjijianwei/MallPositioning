@@ -1,5 +1,6 @@
 package com.project.mapapp.model.entity;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -25,7 +26,7 @@ public class Device {
     private String name;
 
     /**
-     * 绑定的监护人ID
+     * 绑定的用户人ID
      */
     private Long user_id;
 
@@ -48,4 +49,10 @@ public class Device {
      * 设备描述信息，用于区分不同被监护人的设备
      */
     private String device_description;
+
+    @TableField(exist = false)
+    private Date bindData;
+
+    @TableField(exist = false)
+    private String relationship;
 }

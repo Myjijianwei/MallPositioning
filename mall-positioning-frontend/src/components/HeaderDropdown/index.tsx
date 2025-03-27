@@ -1,17 +1,23 @@
 import { Dropdown } from 'antd';
-import type { DropDownProps } from 'antd/es/dropdown';
+// @ts-ignore
+import type { DropDownProps, MenuProps } from 'antd/es/dropdown';
 import classNames from 'classnames';
 import React from 'react';
 import styles from './index.less';
 
 export type HeaderDropdownProps = {
   overlayClassName?: string;
-  overlay: React.ReactNode | (() => React.ReactNode) | any;
+  menu: MenuProps;  // 修改为使用MenuProps类型
   placement?: 'bottomLeft' | 'bottomRight' | 'topLeft' | 'topCenter' | 'topRight' | 'bottomCenter';
-} & Omit<DropDownProps, 'overlay'>;
+} & Omit<DropDownProps, 'overlay'>;  // 从排除列表中移除'overlay'
 
-const HeaderDropdown: React.FC<HeaderDropdownProps> = ({ overlayClassName: cls, ...restProps }) => (
+const HeaderDropdown: React.FC<HeaderDropdownProps> = ({
+                                                         overlayClassName: cls,
+                                                         menu,  // 接收menu属性
+                                                         ...restProps
+                                                       }) => (
   <Dropdown
+    menu={menu}  // 使用menu属性替代overlay
     overlayClassName={classNames(styles.container, cls)}
     getPopupContainer={(target) => target.parentElement || document.body}
     {...restProps}

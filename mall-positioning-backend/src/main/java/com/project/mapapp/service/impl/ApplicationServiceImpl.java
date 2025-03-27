@@ -5,9 +5,12 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.project.mapapp.common.ErrorCode;
 import com.project.mapapp.exception.BusinessException;
 import com.project.mapapp.mapper.NotificationMapper;
+import com.project.mapapp.mapper.UserMapper;
+import com.project.mapapp.mapper.WardMapper;
 import com.project.mapapp.model.dto.application.ApplicationMessage;
 import com.project.mapapp.model.entity.Application;
 import com.project.mapapp.model.entity.Notification;
+import com.project.mapapp.model.entity.Ward;
 import com.project.mapapp.model.enums.ApplicationStatus;
 import com.project.mapapp.service.ApplicationService;
 import com.project.mapapp.mapper.ApplicationMapper;
@@ -19,24 +22,26 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 
 /**
-* @author jjw
-* @description 针对表【application】的数据库操作Service实现
-* @createDate 2025-03-23 15:33:22
-*/
+ * @author jjw
+ * @description 针对表【application】的数据库操作Service实现
+ * @createDate 2025-03-23 15:33:22
+ */
 @Service
 public class ApplicationServiceImpl extends ServiceImpl<ApplicationMapper, Application>
-    implements ApplicationService{
+        implements ApplicationService {
 
     @Autowired
     private ApplicationMapper applicationMapper;
-
     @Autowired
     private RabbitTemplate rabbitTemplate;
-
     @Autowired
     private NotificationService notificationService;
     @Autowired
     private NotificationMapper notificationMapper;
+    @Autowired
+    private WardMapper wardMapper;
+    @Autowired
+    private UserMapper userMapper;
 
     @Override
     public Application submitApplication(String guardianId, String wardDeviceId) {
@@ -61,7 +66,8 @@ public class ApplicationServiceImpl extends ServiceImpl<ApplicationMapper, Appli
 
     @Override
     public boolean confirmApplication(Long notificationId, Boolean isApproved) {
-        String applicationId = notificationMapper.selectById(notificationId).getApplication_id();
+        Notification notification = notificationMapper.selectById(notificationId);
+        String applicationId = notification.getApplication_id();
         // 查询申请记录
         Application application = applicationMapper.selectById(applicationId);
         if (application == null) {
@@ -85,12 +91,19 @@ public class ApplicationServiceImpl extends ServiceImpl<ApplicationMapper, Appli
         }
 
         // 更新申请记录
-        applicationMapper.updateById(application);
-        return true;
+        int count = applicationMapper.updateById(application);
+        //更新被监护人信息
+        String wardDeviceId = application.getWard_device_id();
+        Long wardId = userMapper.selectById(wardDeviceId).getId();
+        Ward ward = new Ward();
+        ward.setUserId(Long.valueOf(application.getGuardian_id()));
+        ward.setId(wardId); // 这里设置正确的id值
+        int count1 = wardMapper.updateById(ward);
+        return count + count1 == 2;
     }
 
     @Override
-    public Long getApplicationId(String guardianId, String wardDeviceId){
+    public Long getApplicationId(String guardianId, String wardDeviceId) {
         QueryWrapper<Application> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("guardian_id", guardianId);
         queryWrapper.eq("ward_device_id", wardDeviceId);

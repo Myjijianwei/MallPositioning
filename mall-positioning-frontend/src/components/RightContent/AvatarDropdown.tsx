@@ -1,4 +1,3 @@
-import { userLogoutUsingPost } from '@/services/backend/userController';
 import { getUnreadNotificationCountUsingGet } from '@/services/MapBackend/notificationController';
 import { BellOutlined, LogoutOutlined, UserOutlined } from '@ant-design/icons';
 import { history, useModel } from '@umijs/max';
@@ -9,6 +8,7 @@ import React, { useCallback, useEffect, useState } from'react';
 import { flushSync } from'react-dom';
 import HeaderDropdown from '../HeaderDropdown';
 import styles from './index.less';
+import { userLogoutUsingPost } from '@/services/MapBackend/userController';
 
 export type GlobalHeaderRightProps = {
   menu?: boolean;

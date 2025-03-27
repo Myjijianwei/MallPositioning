@@ -6,9 +6,9 @@ import Footer from '@/components/Footer';
 import './index.less';
 
 import { LoginForm, ProFormCaptcha, ProFormText, ProFormSelect } from '@ant-design/pro-components';
-import { userRegisterUsingPost } from '@/services/backend/userController';
 import { sendEmailUsingGet } from '@/services/MapBackend/msmController';
 import { useForm } from 'antd/es/form/Form';
+import { userRegisterUsingPost } from '@/services/MapBackend/userController';
 
 const Register: React.FC = () => {
   const [type, setType] = useState<string>('account');

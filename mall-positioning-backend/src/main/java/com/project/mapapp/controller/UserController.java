@@ -1,5 +1,6 @@
 package com.project.mapapp.controller;
 
+import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.ReUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.HttpUtil;
@@ -34,6 +35,8 @@ import javax.servlet.http.HttpServletRequest;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.project.mapapp.common.ErrorCode.PARAMS_ERROR;
+import static com.project.mapapp.common.ErrorCode.SYSTEM_ERROR;
 import static jdk.nashorn.internal.runtime.regexp.joni.Config.log;
 
 /**
@@ -51,16 +54,16 @@ public class UserController {
 
     // region 登录相关
 
-    /**
-     * 用户注册
-     *
-     * @param userRegisterRequest
-     * @return
-     */
     private static final String AVATAR_API_URL = "https://cn.apihz.cn/api/img/apihzimgtx.php";
     private static final String USERNAME_API_URL = "https://cn.apihz.cn/api/zici/sjwm.php";
     private static final String API_ID = "88888888";
     private static final String API_KEY = "88888888";
+
+    // 默认头像URL
+    private static final String DEFAULT_AVATAR_URL = "https://img2.baidu.com/it/u=140788575,4191915434&fm=253&fmt=auto&app=138&f=JPEG?w=500&h=500";
+    // 默认随机用户名
+    private static final String DEFAULT_RANDOM_USERNAME = "新用户_"+ RandomUtil.randomString(8);
+
     @Autowired
     private WardMapper wardMapper;
     @Autowired
@@ -72,7 +75,7 @@ public class UserController {
     @PostMapping("/register")
     public BaseResponse<Long> userRegister(@RequestBody UserRegisterRequest userRegisterRequest) {
         if (userRegisterRequest == null) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+            throw new BusinessException(PARAMS_ERROR);
         }
         String userAccount = userRegisterRequest.getUserAccount();
         String email = userRegisterRequest.getEmail();
@@ -82,7 +85,7 @@ public class UserController {
         String userRole = userRegisterRequest.getUserRole();
 
         if (!ReUtil.isMatch("^[A-Za-z0-9+_.-]+@(.+)$", email)) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "邮箱格式不正确");
+            throw new BusinessException(PARAMS_ERROR, "邮箱格式不正确");
         }
 
         if (StringUtils.isAnyBlank(userAccount, userPassword, checkPassword, email, code)) {
@@ -101,23 +104,34 @@ public class UserController {
         usernameParams.put("id", API_ID);
         usernameParams.put("key", API_KEY);
 
+        String avatarUrl = DEFAULT_AVATAR_URL;
+        String randomUsername = DEFAULT_RANDOM_USERNAME;
+
         try {
             // 使用Hutool发送HTTP GET请求获取头像URL
             String avatarResponse = HttpUtil.get(AVATAR_API_URL, avatarParams);
-            String avatarUrl = parseResponse(avatarResponse);
+            avatarUrl = parseResponse(avatarResponse);
             log.info("avatarUrl:{}", avatarUrl);
+        } catch (Exception e) {
+            log.error("获取头像失败，使用默认头像，详细信息：", e);
+        }
 
+        try {
             // 使用Hutool发送HTTP GET请求获取随机用户名
             String usernameResponse = HttpUtil.get(USERNAME_API_URL, usernameParams);
-            String randomUsername = parseResponse(usernameResponse);
+            randomUsername = parseResponse(usernameResponse);
             log.info("randomUsername:{}", randomUsername);
+        } catch (Exception e) {
+            log.error("获取用户名失败，使用默认用户名，详细信息：", e);
+        }
 
+        try {
             // 调用注册服务并传入头像URL和随机用户名
             long result = userService.userRegister(userAccount, userPassword, checkPassword, email, code, avatarUrl, randomUsername, userRole);
             return ResultUtils.success(result);
         } catch (Exception e) {
-            log.error("获取头像或用户名失败，详细信息：", e);
-            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "获取头像或用户名失败");
+            log.error("注册失败，详细信息：", e);
+            throw new BusinessException(SYSTEM_ERROR, "注册失败");
         }
     }
 
@@ -142,12 +156,12 @@ public class UserController {
     @PostMapping("/login")
     public BaseResponse<User> userLogin(@RequestBody UserLoginRequest userLoginRequest, HttpServletRequest request) {
         if (userLoginRequest == null) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+            throw new BusinessException(PARAMS_ERROR);
         }
         String userAccount = userLoginRequest.getUserAccount();
         String userPassword = userLoginRequest.getUserPassword();
         if (StringUtils.isAnyBlank(userAccount, userPassword)) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+            throw new BusinessException(PARAMS_ERROR);
         }
         User user = userService.userLogin(userAccount, userPassword, request);
         return ResultUtils.success(user);
@@ -179,7 +193,7 @@ public class UserController {
     @PostMapping("/logout")
     public BaseResponse<Boolean> userLogout(HttpServletRequest request) {
         if (request == null) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+            throw new BusinessException(PARAMS_ERROR);
         }
         boolean result = userService.userLogout(request);
         return ResultUtils.success(result);
@@ -213,7 +227,7 @@ public class UserController {
     @PostMapping("/add")
     public BaseResponse<Long> addUser(@RequestBody UserAddRequest userAddRequest, HttpServletRequest request) {
         if (userAddRequest == null) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+            throw new BusinessException(PARAMS_ERROR);
         }
         User user = new User();
         BeanUtils.copyProperties(userAddRequest, user);
@@ -234,7 +248,7 @@ public class UserController {
     @PostMapping("/delete")
     public BaseResponse<Boolean> deleteUser(@RequestBody DeleteRequest deleteRequest, HttpServletRequest request) {
         if (deleteRequest == null || deleteRequest.getId() <= 0) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+            throw new BusinessException(PARAMS_ERROR);
         }
         boolean b = userService.removeById(deleteRequest.getId());
         return ResultUtils.success(b);
@@ -250,14 +264,14 @@ public class UserController {
     @PostMapping("/update")
     public BaseResponse<Boolean> updateUser(@RequestBody UserUpdateRequest userUpdateRequest, HttpServletRequest request) {
         if (userUpdateRequest == null || userUpdateRequest.getId() == null) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数错误");
+            throw new BusinessException(PARAMS_ERROR, "参数错误");
         }
 
         log.info("传来的数据：{}", userUpdateRequest);
 
         boolean result = userService.updateUser(userUpdateRequest);
         if (!result) {
-            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "更新失败");
+            throw new BusinessException(SYSTEM_ERROR, "更新失败");
         }
 
         return ResultUtils.success(true);
@@ -273,7 +287,7 @@ public class UserController {
     @GetMapping("/get")
     public BaseResponse<UserVO> getUserById(int id, HttpServletRequest request) {
         if (id <= 0) {
-            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+            throw new BusinessException(PARAMS_ERROR);
         }
         User user = userService.getById(id);
         UserVO userVO = new UserVO();

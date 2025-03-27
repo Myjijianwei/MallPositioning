@@ -18,8 +18,6 @@ public class DeviceUpdateRequest {
      */
     private String name;
 
-
-
     /**
      * 设备描述信息，用于区分不同被监护人的设备
      */

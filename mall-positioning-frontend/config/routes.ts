@@ -9,13 +9,7 @@ export default [
       { path: '/user/register', component: './User/Register' },
     ],
   },
-  // {
-  //   path: '/real-time-monitoring',
-  //   component: './RealTimeMonitoring',
-  //   name: '实时监控',
-  //   icon: 'compass',
-  //   access: 'canUser', // 修改为 canUser
-  // },
+
   // 首页
   {
     path: '/welcome',
@@ -23,60 +17,44 @@ export default [
     component: './Welcome',
     name: '首页',
   },
-  // 设备管理
+
   {
-    path: '/device',
+    path: '/real-time-monitoring',
+    component: './Ward/LocationReporter',
+    name: '上报位置',
+    icon: 'compass',
+    access: 'canWard',
+  },
+  {
+    path: '/device/list',
     icon: 'mobile',
     name: '设备管理',
-    access: 'canUser', // 修改为 canUser
-    routes: [
-      {
-        path: '/device/list',
-        component: './Device/List',
-        name: '设备列表',
-      },
-      {
-        path: '/device/bind',
-        component: './Device/Bind',
-        name: '绑定设备',
-      },
-      {
-        path: '/device/detail/:id',
-        component: './Device/Detail',
-        name: '设备详情',
-        hideInMenu: true,
-      },
-    ],
+    access: 'canUser',
+    component: './Device/List',
+  },
+  {
+    path: '/device/detail/:id',
+    component: './Device/Detail',
+    name: '设备详情',
+    hideInMenu: true,
   },
 
-  // 实时监控
+
   {
-    path: '/monitor',
+    path: '/monitor/live/:deviceId',
     icon: 'home',
     name: '实时监控',
-    access: 'canUser', // 修改为 canUser
-    routes: [
-      {
-        path: '/monitor/live/:deviceId',
-        component: './Monitor/Live',
-        name: '实时位置',
-        // hideInMenu: true,
-      },
-      {
-        path: '/monitor/multi',
-        component: './Monitor/Multi',
-        name: '多人监控',
-      },
+    access: 'canGuard',
+    component: './Monitor/Live',
 
-    ],
   },
 
   // 历史轨迹
   {
     path: '/history',
-    icon: 'home',
+    icon: 'compass',
     name: '历史轨迹',
-    access: 'canUser', // 修改为 canUser
+    access: 'canGuard',
     routes: [
       {
         path: '/history/track/:deviceId',
@@ -120,7 +98,7 @@ export default [
     path: '/admin',
     icon: 'crown',
     name: '系统管理',
-    access: 'canAdmin', // 修改为 canAdmin
+    access: 'canAdmin',
     routes: [
       { path: '/admin', redirect: '/admin/user' },
       {
@@ -152,5 +130,3 @@ export default [
   // 404页面
   { path: '*', layout: false, component: './404' },
 ];
-
-//YEwmxp9vLFYyLDGVVmXxpLjjAWW3ENxR

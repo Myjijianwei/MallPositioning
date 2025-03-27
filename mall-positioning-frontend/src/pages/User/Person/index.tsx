@@ -1,4 +1,3 @@
-import { getUserByIdUsingGet, updateUserUsingPost } from '@/services/backend/userController';
 import { uploadUsingPost } from '@/services/MapBackend/fileUploadController';
 import { sendEmailUsingGet } from '@/services/MapBackend/msmController';
 import { UploadOutlined } from '@ant-design/icons';
@@ -6,6 +5,7 @@ import { PageContainer } from '@ant-design/pro-components';
 import { Avatar, Button, Form, Input, message, Modal, Select } from 'antd';
 import { useEffect, useState } from 'react';
 import './PersonalInfoSettings.less';
+import { getUserByIdUsingGet, updateUserUsingPost } from '@/services/MapBackend/userController';
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -52,7 +52,9 @@ const Index = () => {
         if (response && response.code === 0 && response.data) {
           const userData = response.data;
           console.log('获取到的用户信息:', userData);
+          // @ts-ignore
           setInitialInfo(userData);
+          // @ts-ignore
           setEditedInfo(userData);
           form.setFieldsValue(userData);
         } else {
@@ -124,6 +126,7 @@ const Index = () => {
         formData.append('file', selectedFile);
         const uploadResponse = await uploadUsingPost({}, selectedFile);
         if (uploadResponse && uploadResponse.code === 0) {
+          // @ts-ignore
           avatarUrl = uploadResponse.data; // 获取 OSS 返回的头像 URL
         } else {
           if (uploadResponse && uploadResponse.message) {

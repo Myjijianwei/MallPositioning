@@ -1,11 +1,16 @@
 package com.project.mapapp.controller;
 
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.project.mapapp.common.BaseResponse;
 import com.project.mapapp.common.ErrorCode;
 import com.project.mapapp.common.ResultUtils;
+import com.project.mapapp.mapper.ApplicationMapper;
+import com.project.mapapp.mapper.DeviceMapper;
 import com.project.mapapp.model.dto.location.LocationReportDTO;
 import com.project.mapapp.model.dto.location.LocationResponseDTO;
+import com.project.mapapp.model.entity.Application;
+import com.project.mapapp.model.entity.Device;
 import com.project.mapapp.service.LocationDataTestService;
 import com.project.mapapp.service.UserService;
 import com.project.mapapp.service.WebSocketService;
@@ -31,6 +36,8 @@ public class LocationDataController {
     private final LocationDataTestService locationService;
     private final UserService userService;
     private final WebSocketService webSocketService;
+    private final DeviceMapper deviceMapper;
+    private final ApplicationMapper applicationMapper;
 
     /**
      * 上报当前位置
@@ -38,6 +45,16 @@ public class LocationDataController {
     @PostMapping("/report")
     public BaseResponse<String> reportLocation(@RequestBody LocationReportDTO dto) {
         log.info("收到位置上报: {}", dto);
+        QueryWrapper<Device> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("user_id",dto.getWardId());
+        String deviceId = deviceMapper.selectOne(queryWrapper).getId();
+        dto.setDeviceId(deviceId);
+        //ward_device_id
+        QueryWrapper<Application> applicationQueryWrapper = new QueryWrapper<>();
+        applicationQueryWrapper.eq("ward_device_id",deviceId);
+        Long guardianId = Long.valueOf(applicationMapper.selectOne(applicationQueryWrapper).getGuardian_id());
+        dto.setGuardianId(guardianId);
+
 
         boolean success = locationService.processLocation(
                 dto.getDeviceId(),

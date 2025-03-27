@@ -42,8 +42,8 @@ public class DeviceServiceImpl extends ServiceImpl<DeviceMapper, Device>
     public Boolean bindDevice(String deviceId, Long userId, String email) {
         ThrowUtils.throwIf(deviceId == null||userId==null, ErrorCode.PARAMS_ERROR);
         // 检查设备是否已绑定
-        Device device_isExist = deviceMapper.selectById(deviceId);
-        ThrowUtils.throwIf(device_isExist != null, ErrorCode.PARAMS_ERROR);
+//        Device device_isExist = deviceMapper.selectById(deviceId);
+//        ThrowUtils.throwIf(device_isExist != null, ErrorCode.PARAMS_ERROR);
 
         //判断设备ID是否还有效
         String redisDeviceMessage = stringRedisTemplate.opsForValue().get("applyDeviceInfo:" + email);

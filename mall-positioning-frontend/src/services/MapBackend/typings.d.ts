@@ -43,6 +43,12 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponseListDevice_ = {
+    code?: number;
+    data?: Device[];
+    message?: string;
+  };
+
   type BaseResponseListDeviceQueryRequest_ = {
     code?: number;
     data?: DeviceQueryRequest[];
@@ -58,6 +64,12 @@ declare namespace API {
   type BaseResponseListUserVO_ = {
     code?: number;
     data?: UserVO[];
+    message?: string;
+  };
+
+  type BaseResponseListWardDeviceInfo_ = {
+    code?: number;
+    data?: WardDeviceInfo[];
     message?: string;
   };
 
@@ -103,6 +115,12 @@ declare namespace API {
     message?: string;
   };
 
+  type BaseResponseWardInfo_ = {
+    code?: number;
+    data?: WardInfo;
+    message?: string;
+  };
+
   type confirmApplicationUsingPOSTParams = {
     /** isApproved */
     isApproved: boolean;
@@ -115,10 +133,12 @@ declare namespace API {
   };
 
   type Device = {
+    bindData?: string;
     created_at?: string;
     device_description?: string;
     id?: string;
     name?: string;
+    relationship?: string;
     status?: number;
     updated_at?: string;
     user_id?: number;
@@ -155,6 +175,16 @@ declare namespace API {
     guardianId?: string;
   };
 
+  type getDeviceByIdUsingGETParams = {
+    /** guardianId */
+    guardianId: string;
+  };
+
+  type getGuardianDevicesUsingGETParams = {
+    /** wardId */
+    wardId: number;
+  };
+
   type getLatestLocationUsingGETParams = {
     /** deviceId */
     deviceId?: string;
@@ -178,6 +208,16 @@ declare namespace API {
   type getWardByGidUsingPOSTParams = {
     /** guardianId */
     guardianId?: number;
+  };
+
+  type getWardDeviceUsingGETParams = {
+    /** guardianId */
+    guardianId: string;
+  };
+
+  type getWardInfoUsingGETParams = {
+    /** wardId */
+    wardId?: string;
   };
 
   type listUserByPageUsingGETParams = {
@@ -208,10 +248,12 @@ declare namespace API {
 
   type LocationReportDTO = {
     accuracy?: number;
+    createTime?: string;
     deviceId?: string;
     guardianId?: number;
     latitude?: number;
     longitude?: number;
+    wardId?: number;
   };
 
   type LocationResponseDTO = {
@@ -273,6 +315,15 @@ declare namespace API {
     wardDeviceId: string;
   };
 
+  type updateWardRelationshipUsingPOSTParams = {
+    /** guardianId */
+    guardianId?: string;
+    /** relationship */
+    relationship?: string;
+    /** wardId */
+    wardId?: string;
+  };
+
   type User = {
     createTime?: string;
     email?: string;
@@ -330,7 +381,36 @@ declare namespace API {
     userRole?: string;
   };
 
+  type WardDeviceInfo = {
+    created_at?: string;
+    current?: number;
+    deviceId?: string;
+    deviceName?: string;
+    device_description?: string;
+    emergencyContact?: string;
+    guardianId?: number;
+    guardianName?: string;
+    pageSize?: number;
+    relationship?: string;
+    sortField?: string;
+    sortOrder?: string;
+    userAge?: number;
+    wardId?: number;
+    wardName?: string;
+  };
+
+  type WardInfo = {
+    deviceName?: string;
+    emergencyContact?: string;
+    id?: number;
+    relationship?: string;
+    userAge?: number;
+    userId?: number;
+  };
+
   type WardRequest = {
+    deviceId?: string;
+    deviceName?: string;
     id?: number;
     name?: string;
     userId?: number;

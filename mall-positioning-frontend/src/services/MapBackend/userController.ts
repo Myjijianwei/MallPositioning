@@ -55,8 +55,8 @@ export async function getLoginUserUsingGet(options?: { [key: string]: any }) {
 /** getWardByGid POST /api/user/getWardByGid */
 export async function getWardByGidUsingPost(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
-  params: { guardianId: number },
-  options?: { [p: string]: any },
+  params: API.getWardByGidUsingPOSTParams,
+  options?: { [key: string]: any },
 ) {
   return request<API.BaseResponseListWardRequest_>('/api/user/getWardByGid', {
     method: 'POST',
