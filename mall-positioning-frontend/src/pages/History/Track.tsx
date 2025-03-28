@@ -12,7 +12,8 @@ import {
   message,
   Typography,
   Divider,
-  Tag
+  Tag,
+  Alert
 } from 'antd';
 import {
   EyeOutlined,
@@ -31,6 +32,7 @@ import {
 } from '@/services/MapBackend/deviceController';
 import { downloadCSV } from '@/utils/fileDownload';
 import { getLocationHistoryUsingGet } from '@/services/MapBackend/locationDataController';
+import { listFencesUsingGet } from '@/services/MapBackend/geoFenceController';
 
 const { RangePicker } = DatePicker;
 const { Text } = Typography;
@@ -53,6 +55,8 @@ const HistoryPage: React.FC = () => {
   const [locationData, setLocationData] = useState<API.LocationResponseDTO[]>([]);
   const [loading, setLoading] = useState(false);
   const [mapLoading, setMapLoading] = useState(false);
+  const [fences, setFences] = useState<API.GeoFence[]>([]);
+  const [visibleFences, setVisibleFences] = useState<Record<string, boolean>>({});
 
   // 处理设备数据响应，统一转为数组格式
   const normalizeDeviceData = (data: any): API.DeviceInfo[] => {
@@ -93,6 +97,28 @@ const HistoryPage: React.FC = () => {
 
     fetchDevices();
   }, [loginUser]);
+
+  // 获取围栏数据
+  const fetchFences = async (deviceId: string) => {
+    try {
+      const res = await listFencesUsingGet({ deviceId });
+      if (res.code === 0 && res.data) {
+        setFences(res.data.map(f => ({
+          ...f,
+          coordinates: Array.isArray(f.coordinates) ? f.coordinates : JSON.parse(f.coordinates || '[]')
+        })));
+        // 默认全部显示
+        setVisibleFences(
+          res.data.reduce((acc, fence) => ({
+            ...acc,
+            [fence.id!]: true
+          }), {})
+        );
+      }
+    } catch (err) {
+      message.error('获取围栏数据失败');
+    }
+  };
 
   // 获取历史轨迹数据
   useEffect(() => {
@@ -136,6 +162,8 @@ const HistoryPage: React.FC = () => {
 
         if (response.code === 0) {
           setLocationData(Array.isArray(response.data) ? response.data : []);
+          // 加载围栏数据
+          await fetchFences(selectedDevice);
         } else {
           message.warning(response.message || '获取历史轨迹失败');
         }
@@ -149,6 +177,23 @@ const HistoryPage: React.FC = () => {
 
     fetchLocationHistory();
   }, [selectedDevice, timeRange, customRange]);
+
+  // 处理围栏显隐变化
+  const handleFenceToggle = (fenceId: string, visible: boolean) => {
+    setVisibleFences(prev => ({ ...prev, [fenceId]: visible }));
+  };
+
+  // 格式化围栏数据
+  const formattedFences = useMemo(() => {
+    return fences
+      .filter(fence => visibleFences[fence.id!] !== false)
+      .map(fence => ({
+        id: fence.id!,
+        name: fence.name || '未命名围栏',
+        coordinates: fence.coordinates as [number, number][],
+        color: fence.color || '#1890ff'
+      }));
+  }, [fences, visibleFences]);
 
   // 导出轨迹数据
   const handleExport = () => {
@@ -205,14 +250,14 @@ const HistoryPage: React.FC = () => {
       endTime: dayjs(last.createTime).format('YYYY-MM-DD HH:mm:ss'),
       deviceName: currentDevice?.deviceName || '未知设备',
       wardName: currentDevice?.wardName || '未知',
-      guardianName: currentDevice?.guardianName || '未知'
+      guardianName: currentDevice?.guardianName || '未知',
+      fenceCount: fences.length
     };
-  }, [locationData, selectedDevice, devices]);
+  }, [locationData, selectedDevice, devices, fences]);
 
   return (
     <PageContainer
       title="历史轨迹查询"
-      // @ts-ignore
       breadcrumb={{ items: [{ title: '首页', path: '/' }, { title: '历史轨迹' }] }}
       extra={[
         <Button
@@ -283,6 +328,7 @@ const HistoryPage: React.FC = () => {
               )}
               <Text>轨迹点数: <Tag color="orange">{stats.pointCount}</Tag></Text>
               <Text>持续时间: <Tag>{stats.duration}</Tag></Text>
+              <Text>围栏数量: <Tag color="purple">{stats.fenceCount}</Tag></Text>
             </Space>
           </div>
         )}
@@ -294,6 +340,9 @@ const HistoryPage: React.FC = () => {
             {locationData.length > 0 ? (
               <StableAMap
                 devices={mapData}
+                fences={formattedFences}
+                showFenceControls
+                onFenceToggle={handleFenceToggle}
                 showPath
                 center={mapData[0] ? {
                   longitude: mapData[0].longitude,

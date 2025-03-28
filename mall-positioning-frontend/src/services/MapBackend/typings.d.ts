@@ -184,8 +184,6 @@ declare namespace API {
     userAge?: number;
     wardId?: number;
     wardName?: string;
-    latitude?: number;
-    longitude?: number;
   };
 
   type DeviceQueryRequest = {

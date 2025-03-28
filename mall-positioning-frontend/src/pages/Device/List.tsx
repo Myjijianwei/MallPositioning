@@ -308,7 +308,6 @@ const List: React.FC = () => {
   const renderEmpty = (description: string) => (
     <div style={{ padding: '40px 0', textAlign: 'center' }}>
       <img
-        src="/empty.svg"
         alt="empty"
         style={{ width: 80, height: 80, marginBottom: 16, opacity: 0.6 }}
       />

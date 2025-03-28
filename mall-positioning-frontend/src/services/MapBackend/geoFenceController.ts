@@ -4,8 +4,8 @@ import { request } from '@umijs/max';
 
 /** createGeoFence POST /api/api/geo-fence/create */
 export async function createGeoFenceUsingPost(
-  body: { deviceId: string; coordinates: string; name: `围栏-${string}` },
-  options?: { [p: string]: any },
+  body: API.GeoFenceCreateRequest,
+  options?: { [key: string]: any },
 ) {
   return request<API.BaseResponseBoolean_>('/api/api/geo-fence/create', {
     method: 'POST',

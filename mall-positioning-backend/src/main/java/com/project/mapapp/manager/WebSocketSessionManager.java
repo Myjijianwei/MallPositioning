@@ -39,11 +39,10 @@ public class WebSocketSessionManager {
                 try {
                     session.close();
                 } catch (IOException e) {
-                    // Ignore close exception
+                    throw new RuntimeException(e);
                 }
             }
 
-            // Clean up empty guardian entries
             if (deviceSessions.isEmpty()) {
                 sessions.remove(guardianId);
             }
@@ -91,5 +90,22 @@ public class WebSocketSessionManager {
 
         heartbeatTasks.values().forEach(task -> task.cancel(false));
         heartbeatTasks.clear();
+    }
+
+    // 设备会话映射
+    private final ConcurrentMap<String, WebSocketSession> deviceSessions = new ConcurrentHashMap<>();
+    // 监护人会话映射
+    private final ConcurrentMap<Long, WebSocketSession> guardianSessions = new ConcurrentHashMap<>();
+
+    public void addDeviceSession(String deviceId, WebSocketSession session) {
+        deviceSessions.put(deviceId, session);
+    }
+
+    public WebSocketSession getDeviceSession(String deviceId) {
+        return deviceSessions.get(deviceId);
+    }
+
+    public void addGuardianSession(Long guardianId, WebSocketSession session) {
+        guardianSessions.put(guardianId, session);
     }
 }

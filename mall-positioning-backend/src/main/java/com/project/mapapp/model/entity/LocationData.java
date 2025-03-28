@@ -1,17 +1,16 @@
 package com.project.mapapp.model.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import lombok.Data;
-
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Date;
+import lombok.Data;
 
 /**
  * 位置数据表
- * @TableName location_data
+ * @TableName location_data_test
  */
 @TableName(value ="location_data")
 @Data
@@ -23,43 +22,37 @@ public class LocationData {
     private Long id;
 
     /**
-     * 设备ID
+     * 设备ID/用户标识
      */
     private String device_id;
 
     /**
-     * 时间戳
-     */
-    private Date timestamp;
-
-    /**
-     * 纬度
+     * 纬度(-90~90)
      */
     private BigDecimal latitude;
 
     /**
-     * 经度
+     * 经度(-180~180)
      */
     private BigDecimal longitude;
 
     /**
-     * 定位精度
+     * 定位精度(米)
      */
     private BigDecimal accuracy;
 
     /**
-     * 定位来源
+     * 定位时间
      */
-    private String source;
+    private Date timestamp;
 
     /**
-     * 监护人 ID
+     * 关联监护人ID
      */
-    private Long guardianId;
+    private Long guardian_id;
 
     /**
-     * 监控端 ID
+     * 记录时间
      */
-    private Long monitorId;
-
+    private LocalDateTime create_time;
 }

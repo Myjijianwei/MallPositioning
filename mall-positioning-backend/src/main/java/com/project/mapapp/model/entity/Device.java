@@ -30,6 +30,7 @@ public class Device {
      */
     private Long user_id;
 
+
     /**
      * 创建时间
      */

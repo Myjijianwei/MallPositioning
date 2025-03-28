@@ -35,13 +35,6 @@ public class GeoFenceController {
         return ResultUtils.success(is);
     }
 
-//    @PostMapping("/delete/{id}")
-//    public BaseResponse<Boolean> deleteGeoFence(
-//            @PathVariable Long id,
-//            HttpServletRequest request
-//    ) {
-//        return geoFenceService.deleteGeoFence(id, userId);
-//    }
 
     @GetMapping("/list")
     public BaseResponse<List<GeoFence>> listFences(
@@ -52,4 +45,11 @@ public class GeoFenceController {
         List<GeoFence> geoFences = geoFenceService.listFences(deviceId, loginUser.getId());
         return ResultUtils.success(geoFences);
     }
+//    @PostMapping("/delete/{id}")
+//    public BaseResponse<Boolean> deleteGeoFence(
+//            @PathVariable Long id,
+//            HttpServletRequest request
+//    ) {
+//        return geoFenceService.deleteGeoFence(id, userId);
+//    }
 }

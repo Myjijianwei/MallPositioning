@@ -87,10 +87,6 @@ const StableAMap: React.FC<StableAMapProps> = ({
       return;
     }
 
-    window._AMapSecurityConfig = {
-      securityJsCode: '您的高德地图安全密钥'
-    };
-
     const script = document.createElement('script');
     script.src = `https://webapi.amap.com/maps?v=2.0&key=1170acb8a7694eab86d82b306f5f5bd2&plugin=AMap.Polygon,AMap.ToolBar,AMap.Polyline,AMap.Scale`;
     script.async = true;

@@ -4,16 +4,18 @@ import { history, useModel } from '@umijs/max';
 import { Avatar, Badge, Menu, Spin } from 'antd';
 import type { ItemType } from 'antd/es/menu/hooks/useItems';
 import { MenuInfo } from 'rc-menu/es/interface';
-import React, { useCallback, useEffect, useState } from'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { flushSync } from'react-dom';
 import HeaderDropdown from '../HeaderDropdown';
 import styles from './index.less';
 import { userLogoutUsingPost } from '@/services/MapBackend/userController';
+// @ts-ignore
+import { MenuProps } from 'antd/es/dropdown';
 
 export type GlobalHeaderRightProps = {
   menu?: boolean;
   hasUnread?: boolean;
-  unreadCount?: number; // 添加接收未读消息数量的属性
+  unreadCount?: number;
 };
 
 const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({
@@ -22,11 +24,15 @@ const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({
                                                           }: GlobalHeaderRightProps) => {
   const { initialState, setInitialState } = useModel('@@initialState');
   const [localUnreadCount, setLocalUnreadCount] = useState(unreadCount || 0);
+  const isMounted = useRef(true); // 用于跟踪组件是否已挂载
 
   useEffect(() => {
     if (unreadCount!== undefined) {
       setLocalUnreadCount(unreadCount);
     }
+    return () => {
+      isMounted.current = false; // 组件卸载时设置为false
+    };
   }, [unreadCount]);
 
   const fetchUnreadCount = async () => {
@@ -34,7 +40,7 @@ const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({
     if (!loginUser ||!loginUser.id) return;
     try {
       const response = await getUnreadNotificationCountUsingGet({ userId: loginUser.id });
-      if (response.data) {
+      if (response.data && isMounted.current) { // 检查组件是否已挂载
         setLocalUnreadCount(response.data);
       }
     } catch (error) {
@@ -47,20 +53,23 @@ const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({
   }, []);
 
   const onMenuClick = useCallback(
-    (event: MenuInfo) => {
+    async (event: MenuInfo) => {
       const { key } = event;
       if (key === 'logout') {
-        // 退出登录逻辑
         flushSync(() => {
-          // @ts-ignore
           setInitialState((s) => ({...s, loginUser: undefined }));
         });
-        userLogoutUsingPost(); // 调用退出登录接口
-        history.push('/user/login'); // 跳转到登录页
+        localStorage.removeItem('userId'); // 清除本地存储的用户 ID
+        try {
+          await userLogoutUsingPost(); // 等待退出登录操作完成
+        } catch (error) {
+          console.error('退出登录失败', error);
+        }
+        history.push('/user/login');
+        window.location.reload();
         return;
       }
       if (key === 'center') {
-        // 跳转到个人中心页面
         history.push('/personal');
         return;
       }
@@ -103,7 +112,7 @@ const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({
     {
       key: 'notice',
       icon: <BellOutlined />,
-      label: `我的消息 (${localUnreadCount})`, // 使用本地状态显示未读数量
+      label: `我的消息 (${localUnreadCount})`,
     },
     {
       key: 'logout',
@@ -112,12 +121,18 @@ const AvatarDropdown: React.FC<GlobalHeaderRightProps> = ({
     },
   ];
 
-  const menuHeaderDropdown = (
-    <Menu className={styles.menu} selectedKeys={[]} onClick={onMenuClick} items={menuItems} />
-  );
+  const menuHeaderDropdown: MenuProps = {
+    className: styles.menu,
+    selectedKeys: [],
+    onClick: onMenuClick,
+    items: menuItems,
+  };
 
   return (
-    <HeaderDropdown overlay={menuHeaderDropdown}>
+    <HeaderDropdown
+      menu={menuHeaderDropdown}
+      overlayClassName={styles.menu}
+    >
       <span className={`${styles.action} ${styles.account}`}>
         <Badge dot={hasUnread}>
           <Avatar size="small" className={styles.avatar} src={loginUser.userAvatar} alt="avatar" />

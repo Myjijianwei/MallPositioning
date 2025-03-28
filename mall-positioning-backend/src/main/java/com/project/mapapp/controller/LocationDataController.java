@@ -11,21 +11,17 @@ import com.project.mapapp.model.dto.location.LocationReportDTO;
 import com.project.mapapp.model.dto.location.LocationResponseDTO;
 import com.project.mapapp.model.entity.Application;
 import com.project.mapapp.model.entity.Device;
-import com.project.mapapp.model.entity.LocationDataTest;
-import com.project.mapapp.service.LocationDataTestService;
+import com.project.mapapp.model.entity.LocationData;
+import com.project.mapapp.service.LocationDataService;
 import com.project.mapapp.service.UserService;
 import com.project.mapapp.service.WebSocketService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
-import org.springframework.http.HttpRequest;
-import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpSession;
-import javax.validation.Valid;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -40,12 +36,12 @@ import java.util.stream.Collectors;
 @Slf4j
 public class LocationDataController {
 
-    private final LocationDataTestService locationService;
+    private final LocationDataService locationService;
     private final UserService userService;
     private final WebSocketService webSocketService;
     private final DeviceMapper deviceMapper;
     private final ApplicationMapper applicationMapper;
-    private final LocationDataTestService locationDataTestService;
+    private final LocationDataService locationDataTestService;
 
     /**
      * 上报当前位置
@@ -92,6 +88,8 @@ public class LocationDataController {
         return ResultUtils.success(response);
     }
 
+
+
     @GetMapping("/history")
     public BaseResponse<List<LocationResponseDTO>> getLocationHistory(
             @RequestParam String deviceId,
@@ -114,11 +112,11 @@ public class LocationDataController {
         }
 
         // 4. 查询数据库
-        List<LocationDataTest> locations = locationDataTestService.queryHistory(deviceId, start, end);
+        List<LocationData> locations = locationDataTestService.queryHistory(deviceId, start, end);
 
         // 5. 转换为DTO
         List<LocationResponseDTO> dtos = locations.stream()
-                .sorted(Comparator.comparing(LocationDataTest::getCreate_time)) // 按时间排序
+                .sorted(Comparator.comparing(LocationData::getCreate_time)) // 按时间排序
                 .map(loc -> {
                     LocationResponseDTO dto = new LocationResponseDTO();
                     dto.setDeviceId(loc.getDevice_id());
