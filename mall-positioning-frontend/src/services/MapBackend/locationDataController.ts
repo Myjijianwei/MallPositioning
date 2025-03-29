@@ -34,15 +34,8 @@ export async function getLatestLocationUsingGet(
 
 /** reportLocation POST /api/location/report */
 export async function reportLocationUsingPost(
-  body: {
-    wardId: any;
-    longitude: number;
-    latitude: number;
-    accuracy: number;
-    timestamp: number;
-    coordinateType: string;
-  },
-  options?: { [p: string]: any },
+  body: API.LocationReportDTO,
+  options?: { [key: string]: any },
 ) {
   return request<API.BaseResponseString_>('/api/location/report', {
     method: 'POST',

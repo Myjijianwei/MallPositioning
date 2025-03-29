@@ -146,6 +146,11 @@ declare namespace API {
     notificationId: number;
   };
 
+  type deleteGeoFenceUsingPOSTParams = {
+    /** id */
+    id: number;
+  };
+
   type DeleteRequest = {
     id?: number;
   };
@@ -222,6 +227,12 @@ declare namespace API {
     id?: string;
     name?: string;
     userId?: string;
+  };
+
+  type GeoFenceUpdateRequest = {
+    coordinates?: number[][];
+    id?: string;
+    name?: string;
   };
 
   type getApplicationsByGidUsingPOSTParams = {

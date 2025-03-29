@@ -1,94 +1,159 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { PageContainer } from '@ant-design/pro-components';
-import { Button, Card, message, Modal, Select, Space, Table, Tag, Typography, Alert, Popconfirm } from 'antd';
-import { PlusOutlined, DeleteOutlined, SyncOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons';
+import { Button, Card, message, Modal, Select, Space, Table, Tag, Typography, Alert, Switch, Tooltip } from 'antd';
+import { PlusOutlined, DeleteOutlined, SyncOutlined, CheckOutlined, CloseOutlined, EditOutlined, EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
 import { useRequest } from 'ahooks';
 import dayjs from 'dayjs';
 import StableAMap from '@/components/StableAMap';
 import {
   createGeoFenceUsingPost,
   listFencesUsingGet,
+  deleteGeoFenceUsingPost
 } from '@/services/MapBackend/geoFenceController';
 import useDeviceModel from '@/models/deviceModel';
 
 const { Text } = Typography;
 
+interface GeoFence extends API.GeoFence {
+  coordinates: [number, number][];
+}
+
 const FencePage: React.FC = () => {
   const {
     devices,
-    deviceLocations,
     loading: devicesLoading,
     fetchDevices,
     fetchDeviceLocation,
     getDeviceStatus
   } = useDeviceModel();
 
+  // State management
   const [selectedDevice, setSelectedDevice] = useState<string>();
   const [drawingMode, setDrawingMode] = useState(false);
   const [tempFence, setTempFence] = useState<[number, number][]>([]);
   const [showConfirmButtons, setShowConfirmButtons] = useState(false);
+  const [visibleFences, setVisibleFences] = useState<Record<string, boolean>>({});
+  const [mapKey, setMapKey] = useState(0);
 
-  // 当前设备状态
-  const currentStatus = selectedDevice ? getDeviceStatus(selectedDevice) : null;
+  // Refs for latest values
+  const tempFenceRef = useRef<[number, number][]>([]);
+  const selectedDeviceRef = useRef<string>();
 
-  // 初始化加载设备
+  // Update refs when state changes
   useEffect(() => {
-    fetchDevices();
+    selectedDeviceRef.current = selectedDevice;
+    tempFenceRef.current = tempFence;
+  }, [selectedDevice, tempFence]);
+
+  // Current device status
+  const currentStatus = selectedDevice ? getDeviceStatus(selectedDevice) : null;
+  const currentDevice = devices.find(d => d.deviceId === selectedDevice);
+
+  // Initialize devices and select first one
+  useEffect(() => {
+    const init = async () => {
+      await fetchDevices();
+      if (devices.length > 0 && !selectedDevice) {
+        handleDeviceChange(devices[0].deviceId);
+      }
+    };
+    init();
   }, []);
 
-  // 围栏数据请求
+  // Fetch fences for selected device
   const { data: fences = [], run: loadFences, loading: fencesLoading } = useRequest(
     async (deviceId?: string) => {
       if (!deviceId) return [];
-      const res = await listFencesUsingGet({ deviceId });
-      return res.data?.map(f => ({
-        ...f,
-        coordinates: Array.isArray(f.coordinates) ? f.coordinates : JSON.parse(f.coordinates || '[]')
-      })) || [];
+      try {
+        const res = await listFencesUsingGet({ deviceId });
+        const fencesData = (res.data || []).map(f => ({
+          ...f,
+          coordinates: Array.isArray(f.coordinates) ? f.coordinates : JSON.parse(f.coordinates || '[]')
+        })) as GeoFence[];
+
+        setVisibleFences(prev => ({
+          ...prev,
+          ...fencesData.reduce((acc, fence) => ({
+            ...acc,
+            [fence.id!]: prev[fence.id!] !== false
+          }), {})
+        }));
+
+        return fencesData;
+      } catch (error) {
+        message.error('获取围栏数据失败');
+        return [];
+      }
     },
     { manual: true }
   );
 
-  // 创建围栏 - 修改为直接传递数组
+  // API operations
   const { run: createFence } = useRequest(createGeoFenceUsingPost, {
     manual: true,
     onSuccess: () => {
       message.success('围栏创建成功');
-      loadFences(selectedDevice);
-      setDrawingMode(false);
-      setShowConfirmButtons(false);
+      resetDrawingState();
+      loadFences(selectedDeviceRef.current);
+      setMapKey(prev => prev + 1);
     },
     onError: (error) => {
       message.error(`创建失败: ${error.message}`);
     }
   });
 
-  // 设备选择变化
-  const handleDeviceChange = async (value: string) => {
+  const { run: deleteFence } = useRequest(deleteGeoFenceUsingPost, {
+    manual: true,
+    onSuccess: () => {
+      message.success('围栏删除成功');
+      loadFences(selectedDeviceRef.current);
+      setMapKey(prev => prev + 1);
+    },
+    onError: (error) => {
+      message.error(`删除失败: ${error.message}`);
+    }
+  });
+
+  // Reset drawing state
+  const resetDrawingState = useCallback(() => {
+    setDrawingMode(false);
+    setShowConfirmButtons(false);
+    setTempFence([]);
+    tempFenceRef.current = [];
+  }, []);
+
+  // Handle device change
+  const handleDeviceChange = useCallback(async (value: string) => {
+    resetDrawingState();
     setSelectedDevice(value);
     await fetchDeviceLocation(value);
     loadFences(value);
-  };
+    setTimeout(() => setMapKey(prev => prev + 1), 300);
+  }, []);
 
-  // 处理围栏绘制完成
-  const handleFenceDrawn = (coordinates: [number, number][]) => {
-    if (coordinates.length < 3) {
-      message.warning('至少需要3个点才能创建围栏');
+  // Handle fence drawing completion
+  const handleFenceDrawn = useCallback((coordinates: [number, number][]) => {
+    const validCoords = coordinates.length >= 3 ? coordinates : [];
+    setTempFence(validCoords);
+    tempFenceRef.current = validCoords;
+    setShowConfirmButtons(validCoords.length >= 3);
+  }, []);
+
+  // Confirm fence creation
+  const confirmFence = useCallback(() => {
+    const finalCoordinates = tempFence.length > 0 ? tempFence : tempFenceRef.current;
+    const currentDeviceId = selectedDeviceRef.current;
+
+    if (!currentDeviceId || finalCoordinates.length < 3) {
+      message.error('无法提交围栏：缺少必要参数');
       return;
     }
-    setTempFence(coordinates);
-    setShowConfirmButtons(true);
-  };
-
-  // 确认围栏提交
-  const confirmFence = () => {
-    if (!selectedDevice || tempFence.length < 3) return;
 
     Modal.confirm({
       title: '确认创建电子围栏',
       content: (
         <div>
-          <p>将为设备创建包含 {tempFence.length} 个顶点的电子围栏</p>
+          <p>将为设备创建包含 {finalCoordinates.length} 个顶点的电子围栏</p>
           <Alert
             type="info"
             message="围栏创建后，当设备超出该区域时会触发报警"
@@ -96,20 +161,37 @@ const FencePage: React.FC = () => {
           />
         </div>
       ),
-      okText: '确认创建',
-      cancelText: '再检查下',
       onOk: () => {
-        createFence({
-          deviceId: selectedDevice,
-          coordinates: tempFence, // 直接传递数组
+        return createFence({
+          deviceId: currentDeviceId,
+          coordinates: finalCoordinates,
           name: `围栏-${dayjs().format('YYYY-MM-DD HH:mm')}`
         });
       }
     });
-  };
+  }, [tempFence]);
 
-  // 当前选中设备
-  const currentDevice = devices.find(d => d.deviceId === selectedDevice);
+  // Toggle fence visibility
+  const toggleFenceVisibility = useCallback((fenceId: string, visible: boolean) => {
+    setVisibleFences(prev => ({
+      ...prev,
+      [fenceId]: visible
+    }));
+  }, []);
+
+  // Toggle all fences visibility
+  const toggleAllFencesVisibility = useCallback((visible: boolean) => {
+    const newVisibility = fences.reduce((acc, fence) => ({
+      ...acc,
+      [fence.id!]: visible
+    }), {});
+    setVisibleFences(newVisibility);
+  }, [fences]);
+
+  // Filter visible fences
+  const visibleFencesData = fences.filter(fence => visibleFences[fence.id!] !== false);
+  const hasHiddenFences = fences.some(fence => !visibleFences[fence.id!]);
+  const allVisible = fences.length > 0 && fences.every(fence => visibleFences[fence.id!]);
 
   return (
     <PageContainer
@@ -129,9 +211,9 @@ const FencePage: React.FC = () => {
               label: (
                 <Space>
                   <span>{d.deviceName || '未命名设备'}</span>
-                  {!status.hasLocation && (
-                    <Tag color="orange">需激活</Tag>
-                  )}
+                  <Tag color={status?.hasLocation ? 'green' : 'orange'}>
+                    {status?.hasLocation ? '已激活' : '需激活'}
+                  </Tag>
                 </Space>
               ),
               value: d.deviceId
@@ -142,12 +224,14 @@ const FencePage: React.FC = () => {
     >
       <Card>
         <Space direction="vertical" style={{ width: '100%' }}>
-          {/* 设备状态提示 */}
+          {/* Device status card */}
           {currentDevice && (
-            <Card size="small">
+            <Card size="small" style={{ marginBottom: 16 }}>
               <Space size="large" align="center">
                 <Text strong>设备: <Tag color="blue">{currentDevice.deviceName}</Tag></Text>
-                <Text>监护人: <Tag color="green">{currentDevice.wardName}</Tag></Text>
+                {currentDevice.wardName && (
+                  <Text>被监护人: <Tag color="green">{currentDevice.wardName}</Tag></Text>
+                )}
 
                 {currentStatus?.hasLocation ? (
                   <Space>
@@ -156,11 +240,13 @@ const FencePage: React.FC = () => {
                         {dayjs(currentStatus.lastUpdate).format('YYYY-MM-DD HH:mm')}
                       </Tag>
                     </Text>
-                    <Button
-                      size="small"
-                      icon={<SyncOutlined />}
-                      onClick={() => fetchDeviceLocation(selectedDevice!)}
-                    />
+                    <Tooltip title="刷新位置">
+                      <Button
+                        size="small"
+                        icon={<SyncOutlined />}
+                        onClick={() => fetchDeviceLocation(selectedDevice!)}
+                      />
+                    </Tooltip>
                   </Space>
                 ) : (
                   <Alert
@@ -174,8 +260,8 @@ const FencePage: React.FC = () => {
             </Card>
           )}
 
-          {/* 操作按钮区域 */}
-          <Space>
+          {/* Action buttons */}
+          <Space wrap style={{ marginBottom: 16 }}>
             <Button
               type={drawingMode ? 'primary' : 'default'}
               icon={<PlusOutlined />}
@@ -184,12 +270,8 @@ const FencePage: React.FC = () => {
                   message.warning('请先确保设备有定位信息');
                   return;
                 }
-                const newMode = !drawingMode;
-                setDrawingMode(newMode);
-                setShowConfirmButtons(false);
-                message.info(newMode ?
-                  '绘制模式: 点击地图添加围栏顶点，至少需要3个点' :
-                  '已退出绘制模式');
+                setDrawingMode(!drawingMode);
+                message.info(drawingMode ? '已退出绘制模式' : '绘制模式: 点击地图添加围栏顶点');
               }}
               disabled={!currentStatus?.hasLocation}
             >
@@ -198,43 +280,63 @@ const FencePage: React.FC = () => {
 
             {showConfirmButtons && (
               <Space>
-                <Popconfirm
-                  title="确认提交当前围栏？"
-                  onConfirm={confirmFence}
-                  okText="确认"
-                  cancelText="取消"
+                <Button
+                  type="primary"
+                  icon={<CheckOutlined />}
+                  onClick={confirmFence}
+                  disabled={tempFence.length < 3}
                 >
-                  <Button
-                    type="primary"
-                    icon={<CheckOutlined />}
-                  >
-                    确认围栏
-                  </Button>
-                </Popconfirm>
+                  确认围栏
+                </Button>
                 <Button
                   danger
                   icon={<CloseOutlined />}
-                  onClick={() => {
-                    setShowConfirmButtons(false);
-                    setDrawingMode(false);
-                  }}
+                  onClick={resetDrawingState}
                 >
                   取消
                 </Button>
               </Space>
             )}
+
+            {fences.length > 0 && (
+              <Space>
+                <Button
+                  icon={<EyeOutlined />}
+                  onClick={() => toggleAllFencesVisibility(true)}
+                  disabled={allVisible}
+                >
+                  显示全部
+                </Button>
+                <Button
+                  icon={<EyeInvisibleOutlined />}
+                  onClick={() => toggleAllFencesVisibility(false)}
+                  disabled={!fences.some(f => visibleFences[f.id!])}
+                >
+                  隐藏全部
+                </Button>
+              </Space>
+            )}
+
+            <Button
+              icon={<SyncOutlined />}
+              onClick={() => selectedDevice && loadFences(selectedDevice)}
+              loading={fencesLoading}
+            >
+              刷新围栏
+            </Button>
           </Space>
 
-          {/* 地图容器 - 确保传递了正确的设备位置 */}
+          {/* Map container */}
           <div style={{
             height: '500px',
             border: '1px solid #f0f0f0',
             borderRadius: 4,
-            position: 'relative'
+            position: 'relative',
+            marginBottom: 16
           }}>
             <StableAMap
-              key={selectedDevice}
-              fences={fences}
+              key={`${selectedDevice}-${mapKey}`}
+              fences={visibleFencesData}
               showFences
               drawingMode={drawingMode}
               onFenceDrawn={handleFenceDrawn}
@@ -252,7 +354,6 @@ const FencePage: React.FC = () => {
               }] : []}
             />
 
-            {/* 绘制提示 */}
             {drawingMode && (
               <div style={{
                 position: 'absolute',
@@ -273,7 +374,7 @@ const FencePage: React.FC = () => {
             )}
           </div>
 
-          {/* 围栏列表 */}
+          {/* Fences table */}
           <Table
             dataSource={fences}
             loading={fencesLoading}
@@ -284,31 +385,51 @@ const FencePage: React.FC = () => {
             }}
             columns={[
               {
-                title: '围栏名称',
+                title: '显示',
+                width: 80,
                 render: (_, record) => (
-                  <Space>
+                  <Switch
+                    checked={visibleFences[record.id!] !== false}
+                    onChange={(checked) => toggleFenceVisibility(record.id!, checked)}
+                  />
+                )
+              },
+              {
+                title: '围栏信息',
+                render: (_, record) => (
+                  <Space direction="vertical" size={4}>
                     <Text strong>{record.name}</Text>
-                    <Tag color="blue">{record.coordinates.length}个顶点</Tag>
+                    <Space size="small">
+                      <Tag color="blue">{record.coordinates.length}个顶点</Tag>
+                    </Space>
                   </Space>
                 )
               },
               {
                 title: '创建时间',
-                dataIndex: 'createdAt',
+                dataIndex: "createdAt",
                 render: (text) => dayjs(text).format('YYYY-MM-DD HH:mm')
               },
               {
                 title: '操作',
-                width: 120,
+                width: 150,
                 render: (_, record) => (
-                  <Popconfirm
-                    title="确定要删除这个围栏吗？"
-                    onConfirm={() => deleteGeoFenceUsingPost({ id: record.id }).then(() => loadFences(selectedDevice))}
-                    okText="确定"
-                    cancelText="取消"
-                  >
-                    <Button danger size="small" icon={<DeleteOutlined />} />
-                  </Popconfirm>
+                  <Tooltip title="删除">
+                    <Button
+                      danger
+                      size="small"
+                      icon={<DeleteOutlined />}
+                      onClick={() => {
+                        Modal.confirm({
+                          title: `确定要删除围栏 "${record.name}" 吗？`,
+                          content: '删除后无法恢复',
+                          okText: '确认删除',
+                          okType: 'danger',
+                          onOk: () => deleteFence({ id: record.id })
+                        });
+                      }}
+                    />
+                  </Tooltip>
                 )
               }
             ]}

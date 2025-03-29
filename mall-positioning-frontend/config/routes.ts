@@ -50,7 +50,7 @@ export default [
   },
   {
     path: '/fence',
-    icon: 'home',
+    icon: 'crown',
     name: '地理栅栏',
     access: 'canGuard',
     component: './Fence/index',

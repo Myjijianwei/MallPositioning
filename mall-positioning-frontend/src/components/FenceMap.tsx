@@ -3,9 +3,6 @@ import { Button, message } from 'antd';
 
 import { Amap, AmapPolygon } from '@amap/amap-react';
 
-// 假设 API 是一个已经定义好的命名空间
-// 如果不是，需要确保正确引入
-// 这里暂时忽略类型检查
 interface API {
   GeoFence: {
     id: string;
