@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from'react';
+import React, { useEffect, useState } from 'react';
 import { PageContainer } from '@ant-design/pro-layout';
-import { List, Tag, Badge, Button, message, Modal } from 'antd';
+import { List, Badge, Button, message, Modal } from 'antd';
 import { useModel } from '@@/exports';
 import {
   getNotificationsUsingGet,
@@ -16,7 +16,7 @@ const NotificationList: React.FC = () => {
   const { loginUser } = initialState || {};
 
   const fetchNotifications = async () => {
-    if (!loginUser ||!loginUser.id) {
+    if (!loginUser?.id) {
       console.error('未获取到登录用户信息');
       return;
     }
@@ -45,7 +45,6 @@ const NotificationList: React.FC = () => {
 
   const handleMarkAllAsRead = async () => {
     try {
-      // @ts-ignore
       await markAllAsReadUsingPost({ userId: loginUser?.id });
       fetchNotifications(); // 重新获取通知列表
       message.success('全部通知已标记为已读');
@@ -64,7 +63,7 @@ const NotificationList: React.FC = () => {
         try {
           const response = await confirmApplicationUsingPost({ notificationId, isApproved });
           if (response.data) {
-            message.success(isApproved? '已同意申请' : '已拒绝申请');
+            message.success(isApproved ? '已同意申请' : '已拒绝申请');
             fetchNotifications(); // 重新获取通知列表
           }
         } catch (error) {
@@ -81,6 +80,11 @@ const NotificationList: React.FC = () => {
     fetchNotifications();
   }, []);
 
+  // Helper function to check if the item is a binding application
+  const isBindingApplication = (item: API.NotificationMessage) => {
+    return item.message?.includes('待确认的绑定申请');
+  };
+
   return (
     <PageContainer
       extra={[
@@ -96,14 +100,11 @@ const NotificationList: React.FC = () => {
           <List.Item
             actions={[
               !item.is_read && (
-                // @ts-ignore
                 <Button type="link" onClick={() => handleMarkAsRead(item.id)}>
                   标记为已读
                 </Button>
               ),
-              // 只有消息内容包含“待确认的绑定申请”时，才根据 status 判断显示内容
-              // @ts-ignore
-              loginUser.userRole === 'ward' && item.message.includes('待确认的绑定申请') && (
+              loginUser?.userRole === 'ward' && isBindingApplication(item) && (
                 (() => {
                   switch (item.status) {
                     case 'PENDING_CONFIRMATION':
@@ -135,9 +136,7 @@ const NotificationList: React.FC = () => {
                 </Badge>
               }
               description={
-                // 只有当用户角色为 ward 且消息内容包含“待确认的绑定申请”时，才显示申请人信息
-                // @ts-ignore
-                loginUser.userRole === 'ward' && item.message.includes('待确认的绑定申请')
+                loginUser?.userRole === 'ward' && isBindingApplication(item)
                   ? `时间：${item.created_at}，申请人：${item.userName || '未知'}`
                   : `时间：${item.created_at}`
               }

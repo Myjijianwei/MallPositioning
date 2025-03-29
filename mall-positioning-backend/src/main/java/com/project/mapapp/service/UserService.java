@@ -61,8 +61,15 @@ public interface UserService extends IService<User> {
 
     User loginByEmail(String email, String code, HttpServletRequest request);
 
-    boolean resetPassword(String email, String code, String newPassword);
-
+    /**
+     * 重置密码
+     * @param email 邮箱
+     * @param code 验证码
+     * @param newPassword 新密码
+     * @param confirmPassword 确认密码
+     * @return 是否成功
+     */
+    boolean resetPassword(String email, String code, String newPassword, String confirmPassword);
     boolean updateUser(UserUpdateRequest userUpdateRequest);
     void validateEmailAndCode(UserUpdateRequest userUpdateRequest, User currentUser);
 }

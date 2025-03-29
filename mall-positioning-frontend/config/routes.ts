@@ -7,6 +7,8 @@ export default [
     routes: [
       { path: '/user/login', component: './User/Login' },
       { path: '/user/register', component: './User/Register' },
+      { path: '/user/forgot-password', component: './User/ForgotPassword' },
+
     ],
   },
 
@@ -56,6 +58,14 @@ export default [
     component: './Fence/index',
 
   },
+  //警告
+  {
+    path: '/alerts',
+    icon: 'alert',
+    name: '警报中心',
+    access: 'canGuard',
+    component: './Alerts/AlarmList',
+  },
   // 历史轨迹
   {
     path: '/history',
@@ -67,12 +77,13 @@ export default [
         path: '/history/track/:deviceId',
         component: './History/Track',
         name: '轨迹回放',
-        // hideInMenu: true,
+
       },
       {
         path: '/history/analysis',
         component: './History/Analysis',
         name: '轨迹分析',
+        hideInMenu: true,
       },
     ],
   },

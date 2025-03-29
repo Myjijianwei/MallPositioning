@@ -7,10 +7,8 @@ import { requestConfig } from './requestConfig';
 import RightContent from '@/components/RightContent';
 import { getLoginUserUsingGet } from '@/services/MapBackend/userController';
 
-
 const isDev = process.env.NODE_ENV === 'development';
 const loginPath = '/user/login';
-
 
 export async function getInitialState(): Promise<InitialState> {
   // 当页面首次加载时，获取要全局保存的数据，比如用户登录信息

@@ -1,6 +1,5 @@
-// src/components/StableAMap.tsx
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { message } from 'antd';
+import { Button, message } from 'antd';
 import dayjs from 'dayjs';
 
 declare global {
@@ -9,6 +8,7 @@ declare global {
     _AMapSecurityConfig: {
       securityJsCode?: string;
     };
+    initAMap: () => void;
   }
 }
 
@@ -35,8 +35,6 @@ interface StableAMapProps {
   zoom?: number;
   showPath?: boolean;
   showFences?: boolean;
-  drawingMode?: boolean;
-  onFenceDrawn?: (coordinates: [number, number][]) => void;
 }
 
 const StableAMap: React.FC<StableAMapProps> = ({
@@ -46,38 +44,53 @@ const StableAMap: React.FC<StableAMapProps> = ({
                                                  zoom = 15,
                                                  showPath = false,
                                                  showFences = true,
-                                                 drawingMode = false,
-                                                 onFenceDrawn
                                                }) => {
   const mapRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
   const pathRef = useRef<any>(null);
   const fencesRef = useRef<any[]>([]);
-  const drawingPolygonRef = useRef<any>(null);
-  const drawingPathRef = useRef<[number, number][]>([]);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
 
   // 初始化地图
   const initMap = useCallback(() => {
-    const defaultCenter = center ? [center.longitude, center.latitude] : [116.397428, 39.90923];
-    const map = new window.AMap.Map('map-container', {
-      zoom: zoom,
-      center: defaultCenter,
-      viewMode: '3D',
-      showIndoorMap: true,
-      expandZoomRange: true
-    });
+    try {
+      if (!window.AMap) {
+        throw new Error('AMap SDK 未加载');
+      }
 
-    // 添加缩放控件
-    map.addControl(new window.AMap.ToolBar({
-      position: 'RB'
-    }));
+      // 设置安全密钥
+      window._AMapSecurityConfig = {
+        securityJsCode: '您的安全密钥', // 替换为实际的安全密钥
+      };
 
-    // 添加比例尺
-    map.addControl(new window.AMap.Scale());
+      // 先加载核心SDK
+      const map = new window.AMap.Map('map-container', {
+        zoom: zoom,
+        center: center ? [center.longitude, center.latitude] : [116.397428, 39.90923],
+        viewMode: '2D',
+        showIndoorMap: false,
+        expandZoomRange: true,
+      });
 
-    mapRef.current = map;
-    setMapLoaded(true);
+      // 动态加载插件
+      window.AMap.plugin(
+        ['AMap.ToolBar', 'AMap.Scale', 'AMap.Polygon', 'AMap.Polyline'],
+        () => {
+          // 添加控件
+          map.addControl(new window.AMap.ToolBar({ position: 'RB' }));
+          map.addControl(new window.AMap.Scale());
+
+          mapRef.current = map;
+          setMapLoaded(true);
+          setMapError(null);
+        }
+      );
+    } catch (err) {
+      console.error('地图初始化失败:', err);
+      setMapError('地图初始化失败，请刷新页面重试');
+      setMapLoaded(false);
+    }
   }, [center, zoom]);
 
   // 加载地图SDK
@@ -87,19 +100,16 @@ const StableAMap: React.FC<StableAMapProps> = ({
       return;
     }
 
-    const script = document.createElement('script');
-    script.src = `https://webapi.amap.com/maps?v=2.0&key=1170acb8a7694eab86d82b306f5f5bd2&plugin=AMap.Polygon,AMap.ToolBar,AMap.Polyline,AMap.Scale`;
-    script.async = true;
+    // 定义全局回调函数
+    window.initAMap = initMap;
 
-    script.onload = () => {
-      if (window.AMap) {
-        initMap();
-      } else {
-        message.error('地图加载失败，请刷新重试');
-      }
-    };
+    const script = document.createElement('script');
+    script.src = `https://webapi.amap.com/maps?v=2.0&key=1170acb8a7694eab86d82b306f5f5bd2&callback=initAMap`;
+    script.async = true;
+    script.defer = true;
 
     script.onerror = () => {
+      setMapError('地图SDK加载失败');
       message.error('地图SDK加载失败，请检查网络连接');
     };
 
@@ -108,23 +118,39 @@ const StableAMap: React.FC<StableAMapProps> = ({
     return () => {
       document.head.removeChild(script);
       if (mapRef.current) {
-        mapRef.current.destroy();
+        try {
+          mapRef.current.destroy();
+        } catch (e) {
+          console.error('地图销毁失败:', e);
+        }
         mapRef.current = null;
       }
+      // @ts-ignore
+      delete window.initAMap;
     };
   }, [initMap]);
 
   // 清理地图元素
   const clearMapElements = useCallback(() => {
-    markersRef.current.forEach(marker => mapRef.current?.remove(marker));
-    markersRef.current = [];
+    if (!mapRef.current) return;
 
-    fencesRef.current.forEach(fence => mapRef.current?.remove(fence));
-    fencesRef.current = [];
+    try {
+      markersRef.current.forEach(marker => {
+        mapRef.current?.remove(marker);
+      });
+      markersRef.current = [];
 
-    if (pathRef.current) {
-      mapRef.current?.remove(pathRef.current);
-      pathRef.current = null;
+      fencesRef.current.forEach(fence => {
+        mapRef.current?.remove(fence);
+      });
+      fencesRef.current = [];
+
+      if (pathRef.current) {
+        mapRef.current?.remove(pathRef.current);
+        pathRef.current = null;
+      }
+    } catch (err) {
+      console.error('清理地图元素失败:', err);
     }
   }, []);
 
@@ -132,85 +158,43 @@ const StableAMap: React.FC<StableAMapProps> = ({
   const updateDevices = useCallback(() => {
     if (!mapRef.current || devices.length === 0) return;
 
-    // 创建设备标记
+    clearMapElements();
+
     devices.forEach(device => {
       const marker = new window.AMap.Marker({
         position: [device.longitude, device.latitude],
         content: `
-          <div style="
-            position: relative;
-            width: 24px;
-            height: 24px;
-          ">
-            <div style="
-              width: 100%;
-              height: 100%;
-              background: #1890ff;
-              border-radius: 50%;
-              border: 2px solid white;
-              box-shadow: 0 0 10px rgba(24,144,255,0.5);
-              animation: pulse 1.5s infinite;
-            "></div>
-            <div style="
-              position: absolute;
-              top: -30px;
-              left: 50%;
-              transform: translateX(-50%);
-              background: white;
-              padding: 2px 8px;
-              border-radius: 4px;
-              box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-              white-space: nowrap;
-              font-size: 12px;
-              font-weight: bold;
-            ">
+          <div style="position:relative;width:24px;height:24px;">
+            <div style="width:100%;height:100%;background:#1890ff;border-radius:50%;border:2px solid white;box-shadow:0 0 10px rgba(24,144,255,0.5);animation:pulse 1.5s infinite;"></div>
+            <div style="position:absolute;top:-30px;left:50%;transform:translateX(-50%);background:white;padding:2px 8px;border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,0.2);white-space:nowrap;font-size:12px;font-weight:bold;">
               ${device.name}
             </div>
           </div>
-          <style>
-            @keyframes pulse {
-              0% { transform: scale(1); opacity: 1; }
-              50% { transform: scale(1.2); opacity: 0.7; }
-              100% { transform: scale(1); opacity: 1; }
-            }
-          </style>
+          <style>@keyframes pulse{0%{transform:scale(1);opacity:1;}50%{transform:scale(1.2);opacity:0.7;}100%{transform:scale(1);opacity:1;}}</style>
         `,
         offset: new window.AMap.Pixel(-12, -12)
       });
 
-      // 信息窗口
       const infoWindow = new window.AMap.InfoWindow({
         content: `
-          <div style="padding: 8px; min-width: 220px;">
-            <h4 style="margin-bottom: 8px;">${device.name}</h4>
-            <div style="margin-bottom: 4px;">
-              <span style="color: #666;">位置: </span>
+          <div style="padding:8px;min-width:220px;">
+            <h4 style="margin-bottom:8px;">${device.name}</h4>
+            <div style="margin-bottom:4px;">
+              <span style="color:#666;">位置: </span>
               <span>${device.latitude.toFixed(6)}, ${device.longitude.toFixed(6)}</span>
             </div>
-            ${device.accuracy ? `
-            <div style="margin-bottom: 4px;">
-              <span style="color: #666;">精度: </span>
-              <span>${device.accuracy.toFixed(2)} 米</span>
-            </div>` : ''}
-            ${device.timestamp ? `
-            <div>
-              <span style="color: #666;">时间: </span>
-              <span>${dayjs(device.timestamp).format('YYYY-MM-DD HH:mm')}</span>
-            </div>` : ''}
+            ${device.accuracy ? `<div style="margin-bottom:4px;"><span style="color:#666;">精度: </span><span>${device.accuracy.toFixed(2)} 米</span></div>` : ''}
+            ${device.timestamp ? `<div><span style="color:#666;">时间: </span><span>${dayjs(device.timestamp).format('YYYY-MM-DD HH:mm')}</span></div>` : ''}
           </div>
         `,
         offset: new window.AMap.Pixel(0, -40)
       });
 
-      marker.on('click', () => {
-        infoWindow.open(mapRef.current, marker.getPosition());
-      });
-
+      marker.on('click', () => infoWindow.open(mapRef.current, marker.getPosition()));
       markersRef.current.push(marker);
       mapRef.current.add(marker);
     });
 
-    // 绘制设备轨迹
     if (showPath && devices.length > 1) {
       const path = devices.map(d => [d.longitude, d.latitude]);
       pathRef.current = new window.AMap.Polyline({
@@ -223,11 +207,11 @@ const StableAMap: React.FC<StableAMapProps> = ({
       });
       mapRef.current.add(pathRef.current);
     }
-  }, [devices, showPath]);
+  }, [devices, showPath, clearMapElements]);
 
   // 更新电子围栏
   const updateFences = useCallback(() => {
-    if (!mapRef.current || !showFences) return;
+    if (!mapRef.current || !showFences || fences.length === 0) return;
 
     fences.forEach(fence => {
       const polygon = new window.AMap.Polygon({
@@ -247,78 +231,43 @@ const StableAMap: React.FC<StableAMapProps> = ({
   useEffect(() => {
     if (!mapLoaded) return;
 
-    clearMapElements();
     updateDevices();
     updateFences();
 
-    // 调整视图
     if (center) {
       mapRef.current?.setCenter([center.longitude, center.latitude]);
     } else if (devices.length > 0) {
-      const bounds = markersRef.current
-        .map(m => m.getPosition())
-        .concat(fencesRef.current.flatMap(f => f.getBounds()));
-      mapRef.current?.setFitView(bounds, true, [60, 60, 60, 60]);
-    }
-  }, [mapLoaded, devices, fences, center, clearMapElements, updateDevices, updateFences]);
-
-  // 处理绘制模式
-  useEffect(() => {
-    if (!mapLoaded || !drawingMode) return;
-
-    const handleClick = (e: any) => {
-      drawingPathRef.current.push([e.lnglat.lng, e.lnglat.lat]);
-      updateDrawingPolygon();
-    };
-
-    const handleRightClick = () => {
-      if (drawingPathRef.current.length >= 3) {
-        onFenceDrawn?.(drawingPathRef.current);
-        resetDrawing();
+      const positions = markersRef.current.map(m => m.getPosition()).filter(Boolean);
+      if (positions.length > 0) {
+        mapRef.current?.setFitView(positions, true, [60, 60, 60, 60]);
       }
-    };
-
-    mapRef.current.on('click', handleClick);
-    mapRef.current.on('rightclick', handleRightClick);
-
-    return () => {
-      mapRef.current?.off('click', handleClick);
-      mapRef.current?.off('rightclick', handleRightClick);
-      resetDrawing();
-    };
-  }, [mapLoaded, drawingMode, onFenceDrawn]);
-
-  // 更新绘制中的多边形
-  const updateDrawingPolygon = () => {
-    if (drawingPolygonRef.current) {
-      mapRef.current.remove(drawingPolygonRef.current);
     }
-
-    if (drawingPathRef.current.length > 1) {
-      drawingPolygonRef.current = new window.AMap.Polygon({
-        path: drawingPathRef.current,
-        strokeColor: '#1890ff',
-        strokeWeight: 3,
-        strokeOpacity: 1,
-        fillColor: '#1890ff40',
-        fillOpacity: 0.4
-      });
-      mapRef.current.add(drawingPolygonRef.current);
-    }
-  };
-
-  // 重置绘制状态
-  const resetDrawing = () => {
-    drawingPathRef.current = [];
-    if (drawingPolygonRef.current) {
-      mapRef.current.remove(drawingPolygonRef.current);
-      drawingPolygonRef.current = null;
-    }
-  };
+  }, [mapLoaded, devices, fences, center, updateDevices, updateFences]);
 
   return (
     <div id="map-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
-      {!mapLoaded && (
+      {mapError ? (
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: '#f5f5f5',
+          zIndex: 10,
+          flexDirection: 'column',
+          padding: 20,
+          textAlign: 'center'
+        }}>
+          <div style={{ color: '#f5222d', marginBottom: 16 }}>{mapError}</div>
+          <Button type="primary" onClick={() => window.location.reload()}>
+            刷新页面
+          </Button>
+        </div>
+      ) : !mapLoaded ? (
         <div style={{
           display: 'flex',
           justifyContent: 'center',
@@ -343,14 +292,9 @@ const StableAMap: React.FC<StableAMapProps> = ({
               marginBottom: 16
             }}></div>
             <div>地图加载中...</div>
-            <style>{`
-              @keyframes spin {
-                to { transform: rotate(360deg); }
-              }
-            `}</style>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 };

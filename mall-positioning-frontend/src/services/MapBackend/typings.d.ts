@@ -1,4 +1,33 @@
 declare namespace API {
+  type AlertBatchUpdateDTO = {
+    ids?: number[];
+    status?: 'UNRESOLVED' | 'RESOLVED' | 'IGNORED' | 'DELETED';
+  };
+
+  type AlertDetailVO = {
+    coordinates?: string;
+    deviceId?: string;
+    deviceName?: string;
+    fenceId?: string;
+    fenceName?: string;
+    id?: number;
+    message?: string;
+    resolvedAt?: string;
+    status?: 'UNRESOLVED' | 'RESOLVED' | 'IGNORED' | 'DELETED';
+    triggeredAt?: string;
+    type?: 'GEO_FENCE' | 'DEVICE_OFFLINE' | 'BATTERY_LOW' | 'SOS';
+  };
+
+  type AlertVO = {
+    deviceId?: string;
+    deviceName?: string;
+    id?: number;
+    message?: string;
+    status?: 'UNRESOLVED' | 'RESOLVED' | 'IGNORED' | 'DELETED';
+    triggeredAt?: string;
+    type?: 'GEO_FENCE' | 'DEVICE_OFFLINE' | 'BATTERY_LOW' | 'SOS';
+  };
+
   type Application = {
     created_at?: string;
     guardian_id?: string;
@@ -11,6 +40,12 @@ declare namespace API {
   type applyDeviceUsingPOSTParams = {
     /** email */
     email: string;
+  };
+
+  type BaseResponseAlertDetailVO_ = {
+    code?: number;
+    data?: AlertDetailVO;
+    message?: string;
   };
 
   type BaseResponseApplication_ = {
@@ -106,6 +141,12 @@ declare namespace API {
   type BaseResponseLong_ = {
     code?: number;
     data?: number;
+    message?: string;
+  };
+
+  type BaseResponsePageAlertVO_ = {
+    code?: number;
+    data?: PageAlertVO_;
     message?: string;
   };
 
@@ -235,6 +276,11 @@ declare namespace API {
     name?: string;
   };
 
+  type getAlertDetailUsingGETParams = {
+    /** id */
+    id: number;
+  };
+
   type getApplicationsByGidUsingPOSTParams = {
     /** guardianId */
     guardianId?: string;
@@ -297,6 +343,30 @@ declare namespace API {
   type getWardInfoUsingGETParams = {
     /** wardId */
     wardId?: string;
+  };
+
+  type ignoreAlertUsingPUTParams = {
+    /** id */
+    id: number;
+  };
+
+  type listAlertsUsingGETParams = {
+    /** current */
+    current?: number;
+    /** deviceId */
+    deviceId?: string;
+    /** endTime */
+    endTime?: string;
+    /** level */
+    level?: 'HIGH' | 'MEDIUM' | 'LOW';
+    /** pageSize */
+    pageSize?: number;
+    /** startTime */
+    startTime?: string;
+    /** status */
+    status?: 'UNRESOLVED' | 'RESOLVED' | 'IGNORED' | 'DELETED';
+    /** type */
+    type?: 'GEO_FENCE' | 'DEVICE_OFFLINE' | 'BATTERY_LOW' | 'SOS';
   };
 
   type listFencesUsingGETParams = {
@@ -374,6 +444,19 @@ declare namespace API {
     column?: string;
   };
 
+  type PageAlertVO_ = {
+    countId?: string;
+    current?: number;
+    maxLimit?: number;
+    optimizeCountSql?: boolean;
+    orders?: OrderItem[];
+    pages?: number;
+    records?: AlertVO[];
+    searchCount?: boolean;
+    size?: number;
+    total?: number;
+  };
+
   type PageUserVO_ = {
     countId?: string;
     current?: number;
@@ -385,6 +468,18 @@ declare namespace API {
     searchCount?: boolean;
     size?: number;
     total?: number;
+  };
+
+  type ResetPasswordRequest = {
+    code?: string;
+    confirmPassword?: string;
+    email?: string;
+    newPassword?: string;
+  };
+
+  type resolveAlertUsingPUTParams = {
+    /** id */
+    id: number;
   };
 
   type sendEmailUsingGETParams = {

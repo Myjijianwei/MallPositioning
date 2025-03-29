@@ -4,6 +4,7 @@ package com.project.mapapp.model.dto.location;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 /**
  * 位置响应DTO
@@ -15,5 +16,6 @@ public class LocationResponseDTO {
     private BigDecimal accuracy;
     private String createTime;
     private String deviceId;
+
 
 }

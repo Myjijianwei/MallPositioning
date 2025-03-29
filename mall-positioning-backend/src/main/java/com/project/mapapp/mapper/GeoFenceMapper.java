@@ -2,6 +2,10 @@ package com.project.mapapp.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.project.mapapp.model.entity.GeoFence;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
+
+import java.util.List;
 
 /**
 * @author jjw
@@ -10,7 +14,8 @@ import com.project.mapapp.model.entity.GeoFence;
 * @Entity com.example.mapapp.model.entity.GeoFence
 */
 public interface GeoFenceMapper extends BaseMapper<GeoFence> {
-
+    @Select("SELECT * FROM geo_fence WHERE device_id = #{deviceId}")
+    List<GeoFence> selectByDeviceId(@Param("deviceId") String deviceId);
 }
 
 

@@ -48,7 +48,7 @@ const WelcomePage: React.FC = () => {
             <Paragraph>
               通过 GPS 和 WIFI 定位技术，实时追踪老人与儿童的位置，确保安全无忧。
             </Paragraph>
-            <Button type="link" href="/monitor">
+            <Button type="link" href="/monitor/live/:deviceId">
               查看实时位置
             </Button>
           </Card>
@@ -63,7 +63,7 @@ const WelcomePage: React.FC = () => {
             <Paragraph>
               记录并展示老人与儿童的历史活动轨迹，帮助您了解他们的日常活动范围。
             </Paragraph>
-            <Button type="link" href="/history">
+            <Button type="link" href="/history/track/:deviceId">
               查看历史轨迹
             </Button>
           </Card>
@@ -78,7 +78,7 @@ const WelcomePage: React.FC = () => {
             <Paragraph>
               设置安全区域，当老人或儿童离开指定范围时，系统将自动发送警报。
             </Paragraph>
-            <Button type="link" href="/geo-fence">
+            <Button type="link" href="/fence">
               设置电子围栏
             </Button>
           </Card>

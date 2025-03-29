@@ -19,7 +19,7 @@ import javax.validation.Valid;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/geo-fence")
+@RequestMapping("/geo-fence")
 @RequiredArgsConstructor
 public class GeoFenceController {
     private final GeoFenceService geoFenceService;
@@ -27,7 +27,7 @@ public class GeoFenceController {
 
     @PostMapping("/create")
     public BaseResponse<Boolean> createGeoFence(
-            @Valid @RequestBody GeoFenceCreateRequest geoFenceCreateRequest,
+            @RequestBody GeoFenceCreateRequest geoFenceCreateRequest,
             HttpServletRequest request
     ) {
         ThrowUtils.throwIf(ObjUtil.isEmpty(geoFenceCreateRequest), ErrorCode.PARAMS_ERROR);

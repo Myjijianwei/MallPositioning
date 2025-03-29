@@ -350,8 +350,51 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     }
 
     @Override
-    public boolean resetPassword(String email, String code, String newPassword) {
+    @Transactional(rollbackFor = Exception.class)
+    public boolean resetPassword(String email, String code, String newPassword, String confirmPassword) {
+        // 参数校验
+        if (StringUtils.isAnyBlank(email, code, newPassword, confirmPassword)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数不能为空");
+        }
 
-        return true;
+        // 校验密码长度
+        if (newPassword.length() < 8) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "密码长度不能少于8位");
+        }
+
+        // 校验两次密码是否一致
+        if (!newPassword.equals(confirmPassword)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "两次输入的密码不一致");
+        }
+
+        // 校验验证码
+        String redisCode = stringRedisTemplate.opsForValue().get("verificationCode:" + email);
+        if (StringUtils.isBlank(redisCode) || !redisCode.equals(code)) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "验证码错误或已过期");
+        }
+
+        // 查询用户
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("email", email);
+        User user = this.getOne(queryWrapper);
+        if (user == null) {
+            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "用户不存在");
+        }
+
+        // 加密新密码
+        String encryptPassword = DigestUtils.md5DigestAsHex((SALT + newPassword).getBytes());
+
+        // 更新密码
+        User updateUser = new User();
+        updateUser.setId(user.getId());
+        updateUser.setUserPassword(encryptPassword);
+        boolean result = this.updateById(updateUser);
+
+        // 删除验证码
+        if (result) {
+            stringRedisTemplate.delete("verificationCode:" + email);
+        }
+
+        return result;
     }
 }

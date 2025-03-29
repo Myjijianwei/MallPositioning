@@ -3,7 +3,9 @@ package com.project.mapapp.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.mapapp.manager.WebSocketSessionManager;
+import com.project.mapapp.model.dto.alert.AlertMessage;
 import com.project.mapapp.model.dto.location.LocationResponseDTO;
+import com.project.mapapp.model.dto.websocket.WebSocketMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -46,5 +48,28 @@ public class WebSocketService {
                 sessionManager.removeSession(guardianId, location.getDeviceId());
             }
         });
+    }
+
+    // 新增警报推送方法
+    public void pushAlert(Long guardianId, AlertMessage alert) {
+        try {
+            WebSocketMessage<AlertMessage> message = new WebSocketMessage<>(
+                    "ALERT",
+                    alert
+            );
+            String jsonMessage = objectMapper.writeValueAsString(message);
+
+            sessionManager.getSessions(guardianId).forEach(session -> {
+                try {
+                    if (session.isOpen()) {
+                        session.sendMessage(new TextMessage(jsonMessage));
+                    }
+                } catch (IOException e) {
+                    log.error("警报推送失败: {}", e.getMessage());
+                }
+            });
+        } catch (JsonProcessingException e) {
+            log.error("序列化警报消息失败: {}", e.getMessage());
+        }
     }
 }

@@ -1,18 +1,38 @@
-import { LockOutlined, MobileOutlined, UserOutlined } from '@ant-design/icons';
-import { message, Tabs, Button } from 'antd';
+import {
+  AlipayCircleOutlined,
+  LockOutlined,
+  MobileOutlined,
+  TaobaoCircleOutlined,
+  UserOutlined,
+  WeiboCircleOutlined,
+} from '@ant-design/icons';
+import {
+  LoginForm,
+  ProFormCaptcha,
+  ProFormText,
+  ProFormSelect,
+} from '@ant-design/pro-components';
+import { Link, history } from '@umijs/max';
+import { message, Tabs } from 'antd';
 import React, { useState } from 'react';
-import { useNavigate } from 'umi';
-import Footer from '@/components/Footer';
-import './index.less';
-
-import { LoginForm, ProFormCaptcha, ProFormText, ProFormSelect } from '@ant-design/pro-components';
-import { sendEmailUsingGet } from '@/services/MapBackend/msmController';
 import { useForm } from 'antd/es/form/Form';
+import Footer from '@/components/Footer';
+import styles from './index.less';
+import { sendEmailUsingGet } from '@/services/MapBackend/msmController';
 import { userRegisterUsingPost } from '@/services/MapBackend/userController';
+
+const ActionIcons = () => {
+  return (
+    <>
+      <AlipayCircleOutlined key="AlipayCircleOutlined" className={styles.action} />
+      <TaobaoCircleOutlined key="TaobaoCircleOutlined" className={styles.action} />
+      <WeiboCircleOutlined key="WeiboCircleOutlined" className={styles.action} />
+    </>
+  );
+};
 
 const Register: React.FC = () => {
   const [type, setType] = useState<string>('account');
-  const navigate = useNavigate();
   const [form] = useForm();
 
   const handleSubmit = async (values: API.UserRegisterRequest) => {
@@ -26,7 +46,7 @@ const Register: React.FC = () => {
       const result = await userRegisterUsingPost(values);
       if (result) {
         message.success('注册成功！');
-        navigate('/user/login');
+        history.push('/user/login');
       }
     } catch (error) {
       message.error('注册失败，请重试！');
@@ -34,32 +54,47 @@ const Register: React.FC = () => {
   };
 
   return (
-    <div className="register-container">
-      <div className="register-content">
+    <div className={styles.container}>
+      <div
+        style={{
+          flex: '1',
+          padding: '32px 0',
+        }}
+      >
         <LoginForm
           form={form}
+          logo={<img alt="logo" src="/logo.svg" />}
+          title="Safe Guardian"
+          subTitle="Safe Guardian，实时守护，让关爱无处不在"
           submitter={{
             searchConfig: {
               submitText: '注册',
             },
           }}
-          logo={<img alt="logo" src="/logo.svg" className="register-logo" />}
-          title="Safe Guardian"
-          subTitle="Safe Guardian，实时守护，让关爱无处不在"
+          actions={['其他登录方式 :', <ActionIcons key="icons" />]}
           onFinish={async (values) => {
             await handleSubmit(values as API.UserRegisterRequest);
           }}
         >
-          <Tabs activeKey={type} onChange={setType} className="register-tabs">
-            <Tabs.TabPane key="account" tab="账号密码注册" />
-          </Tabs>
+          <Tabs
+            activeKey={type}
+            onChange={setType}
+            centered
+            items={[
+              {
+                key: 'account',
+                label: '账号密码注册',
+              },
+            ]}
+          />
+
           {type === 'account' && (
             <>
               <ProFormText
                 name="userAccount"
                 fieldProps={{
                   size: 'large',
-                  prefix: <UserOutlined className="prefix-icon" />,
+                  prefix: <UserOutlined />,
                 }}
                 placeholder="请输入账号"
                 rules={[
@@ -74,7 +109,7 @@ const Register: React.FC = () => {
                 name="userPassword"
                 fieldProps={{
                   size: 'large',
-                  prefix: <LockOutlined className="prefix-icon" />,
+                  prefix: <LockOutlined />,
                 }}
                 placeholder="请输入密码"
                 rules={[
@@ -84,15 +119,16 @@ const Register: React.FC = () => {
                   },
                   {
                     min: 8,
-                    message: '长度不能小于 8',
+                    message: '长度不能小于8位',
                   },
                 ]}
               />
+
               <ProFormText.Password
                 name="checkPassword"
                 fieldProps={{
                   size: 'large',
-                  prefix: <LockOutlined className="prefix-icon" />,
+                  prefix: <LockOutlined />,
                 }}
                 placeholder="请再次输入密码"
                 rules={[
@@ -102,7 +138,7 @@ const Register: React.FC = () => {
                   },
                   {
                     min: 8,
-                    message: '长度不能小于 8',
+                    message: '长度不能小于8位',
                   },
                 ]}
               />
@@ -111,7 +147,6 @@ const Register: React.FC = () => {
                 name="userRole"
                 fieldProps={{
                   size: 'large',
-                  style: { width: '100%' }, // 确保选择框有足够的宽度
                 }}
                 placeholder="请选择用户身份"
                 rules={[
@@ -129,10 +164,10 @@ const Register: React.FC = () => {
               <ProFormText
                 fieldProps={{
                   size: 'large',
-                  prefix: <MobileOutlined className="prefix-icon" />,
+                  prefix: <MobileOutlined />,
                 }}
                 name="email"
-                placeholder="请输入邮箱号！"
+                placeholder="请输入邮箱号"
                 rules={[
                   {
                     required: true,
@@ -144,11 +179,16 @@ const Register: React.FC = () => {
                   },
                 ]}
               />
+
               <ProFormCaptcha
                 fieldProps={{
                   size: 'large',
-                  prefix: <LockOutlined className="prefix-icon" />,
+                  prefix: <LockOutlined />,
                 }}
+                captchaProps={{
+                  size: 'large',
+                }}
+                placeholder="请输入验证码"
                 captchaTextRender={(timing, count) => {
                   if (timing) {
                     return `${count} 秒后重新获取`;
@@ -178,6 +218,18 @@ const Register: React.FC = () => {
               />
             </>
           )}
+
+          <div style={{ textAlign: 'center', marginTop: 16 }}>
+            <Link
+              to="/user/login"
+              onClick={(e) => {
+                e.preventDefault();
+                history.push('/user/login');
+              }}
+            >
+              已有账号？立即登录
+            </Link>
+          </div>
         </LoginForm>
       </div>
       <Footer />

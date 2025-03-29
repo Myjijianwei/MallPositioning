@@ -2,13 +2,16 @@ package com.project.mapapp.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.project.mapapp.mapper.GeoFenceMapper;
 import com.project.mapapp.model.dto.location.LocationResponseDTO;
 import com.project.mapapp.model.entity.LocationData;
+import com.project.mapapp.service.GeoFenceService;
 import com.project.mapapp.service.LocationDataService;
 import com.project.mapapp.mapper.LocationDataMapper;
 import com.project.mapapp.service.WebSocketService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -29,9 +32,14 @@ public class LocationDataServiceImpl extends ServiceImpl<LocationDataMapper, Loc
     @Autowired
     private LocationDataMapper locationDataTestMapper;
 
+    @Autowired
+    private GeoFenceService geoFenceService;
+
     /**
      * 处理位置上报
      */
+    @Override
+    @Transactional
     public boolean processLocation(
             String deviceId,
             BigDecimal latitude,
@@ -50,8 +58,9 @@ public class LocationDataServiceImpl extends ServiceImpl<LocationDataMapper, Loc
         int insert = locationDataTestMapper.insert(location);
 
         // 2. 通过WebSocket通知监护人
-        webSocketService.notifyGuardian(guardianId, convertToResponseDTO(location));
-
+        LocationResponseDTO dto = convertToResponseDTO(location);
+        webSocketService.notifyGuardian(guardianId, dto);
+        geoFenceService.checkLocation(dto);
         return insert > 0;
     }
 

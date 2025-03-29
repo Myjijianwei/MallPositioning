@@ -1,6 +1,19 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { PageContainer } from '@ant-design/pro-components';
-import { Card, Typography, Space, Select, Button, message, Spin, Alert, Tag, Divider, Switch } from 'antd';
+import {
+  Card,
+  Typography,
+  Space,
+  Select,
+  Button,
+  message,
+  Spin,
+  Alert,
+  Tag,
+  Divider,
+  Switch,
+  notification,
+} from 'antd';
 import styled from 'styled-components';
 import StableAMap from '@/components/StableAMap';
 import { useStableWebSocket } from '@/hooks/useStableWebSocket';
@@ -24,6 +37,17 @@ const MonitorCard = styled(Card)`
   }
 `;
 
+interface AlertMessage {
+  type: string;
+  title: string;
+  message: string;
+  longitude?: number;
+  latitude?: number;
+  timestamp: string;
+  deviceId?: string;
+  fenceName?: string;
+}
+
 const LiveMonitor = () => {
   const { initialState } = useModel('@@initialState');
   const { loginUser } = initialState || {};
@@ -36,25 +60,31 @@ const LiveMonitor = () => {
   const [isSwitching, setIsSwitching] = useState(false);
   const [showFences, setShowFences] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [alerts, setAlerts] = useState<AlertMessage[]>([]);
 
-  // 使用 useRequest 管理围栏数据
+  // 获取所有设备的围栏数据
   const {
-    data: fences = [],
-    run: loadFences,
+    data: allFences = [],
+    run: loadAllFences,
     loading: fencesLoading,
     error: fencesError
   } = useRequest(
-    async (deviceId?: string) => {
-      if (!deviceId) return [];
+    async (deviceIds: string[]) => {
       try {
-        const res = await listFencesUsingGet({ deviceId });
-        if (res.code === 0 && res.data) {
-          return res.data.map(f => ({
-            ...f,
-            coordinates: Array.isArray(f.coordinates) ? f.coordinates : JSON.parse(f.coordinates || '[]')
-          }));
-        }
-        throw new Error(res.message || '获取围栏数据失败');
+        const results = await Promise.all(
+          deviceIds.map(async deviceId => {
+            const res = await listFencesUsingGet({ deviceId });
+            if (res.code === 0 && res.data) {
+              return res.data.map(f => ({
+                ...f,
+                deviceId,
+                coordinates: Array.isArray(f.coordinates) ? f.coordinates : JSON.parse(f.coordinates || '[]')
+              }));
+            }
+            return [];
+          })
+        );
+        return results.flat();
       } catch (err) {
         console.error('获取围栏数据失败:', err);
         throw err;
@@ -69,18 +99,39 @@ const LiveMonitor = () => {
     }
   );
 
+  // 按设备ID分组的围栏数据
+  const fencesByDevice = useMemo(() => {
+    return allFences.reduce((acc, fence) => {
+      if (!acc[fence.deviceId]) {
+        acc[fence.deviceId] = [];
+      }
+      acc[fence.deviceId].push(fence);
+      return acc;
+    }, {} as Record<string, any[]>);
+  }, [allFences]);
+
+  // 当前选中设备的围栏
+  const currentFences = useMemo(() => {
+    return fencesByDevice[selectedDevice] || [];
+  }, [selectedDevice, fencesByDevice]);
+
+  // 获取设备列表
   const fetchDevices = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const res = await getWardByGidUsingPost({ guardianId: loginUser?.id });
       if (res.code === 0 && res.data) {
-        const formattedDevices = res.data.map((d: any) => ({
-          id: d.deviceId?.toString() || '',
-          name: d.deviceName || `设备 ${d.deviceId}`,
-        })).filter(device => device.id);
+        const formattedDevices = res.data
+          .map((d: any) => ({
+            id: d.deviceId?.toString() || '',
+            name: d.deviceName || `设备 ${d.deviceId}`,
+          }))
+          .filter((device: any) => device.id);
 
         setDeviceList(formattedDevices);
+
+        // 更新设备状态
         setDevices(prev => {
           const updated = {...prev};
           formattedDevices.forEach((d: any) => {
@@ -91,52 +142,87 @@ const LiveMonitor = () => {
           return updated;
         });
 
+        // 如果有设备但未选中，选择第一个设备
         if (formattedDevices.length > 0 && !selectedDevice) {
-          setSelectedDevice(formattedDevices[0].id);
+          const firstDevice = formattedDevices[0].id;
+          setSelectedDevice(firstDevice);
         }
-      } else {
-        throw new Error(res.message || '获取设备列表失败');
+
+        // 加载所有设备的围栏数据
+        if (formattedDevices.length > 0) {
+          loadAllFences(formattedDevices.map((d: any) => d.id));
+        }
+
+        return formattedDevices;
       }
+      throw new Error(res.message || '获取设备列表失败');
     } catch (err) {
       console.error('获取设备列表失败:', err);
       setError('获取设备列表失败，请检查网络连接或API配置');
       message.error('获取设备列表失败');
+      return [];
     } finally {
       setLoading(false);
     }
-  }, [selectedDevice, loginUser?.id]);
+  }, [selectedDevice, loginUser?.id, loadAllFences]);
 
   // WebSocket 消息处理
   const handleWebSocketMessage = useCallback((data: any) => {
-    console.log('收到WebSocket消息:', data);
-    if (!data?.deviceId) return;
+    // 处理ALERT类型消息
+    if (data.type === 'ALERT' && data.data) {
+      const alertData = data.data;
 
-    if (data.error) {
-      setError(`设备${data.deviceId}连接错误: ${data.error}`);
-      message.error(`设备${data.deviceId}连接错误: ${data.error}`);
-      return;
+      // 从消息内容中提取设备ID和围栏名称
+      const extractDeviceId = (msg: string): string | null => {
+        const match = msg.match(/设备([a-f0-9-]{36})/);
+        return match ? match[1] : null;
+      };
+
+      const deviceId = extractDeviceId(alertData.message) || '';
+      const fenceName = alertData.message.split('围栏')[1]?.trim() || '未知围栏';
+
+      const newAlert: AlertMessage = {
+        type: alertData.type,
+        title: alertData.title,
+        message: alertData.message,
+        longitude: alertData.longitude,
+        latitude: alertData.latitude,
+        timestamp: alertData.triggeredAt,
+        deviceId,
+        fenceName
+      };
+
+      setAlerts(prev => [newAlert, ...prev.slice(0, 5)]);
+
+      // 显示通知
+      notification.warning({
+        message: `${alertData.title} (${fenceName})`,
+        description: alertData.message,
+        placement: 'topRight',
+        duration: 5,
+      });
     }
-
-    const deviceName = deviceList.find(d => d.id === data.deviceId)?.name;
-
-    setDevices((prev) => ({
-      ...prev,
-      [data.deviceId]: {
-        ...data,
-        name: deviceName || `设备 ${data.deviceId}`,
-        timestamp: Date.now(),
-      },
-    }));
+    // 处理普通位置消息
+    else if (data.latitude !== undefined && data.deviceId) {
+      const deviceName = deviceList.find(d => d.id === data.deviceId)?.name;
+      setDevices(prev => ({
+        ...prev,
+        [data.deviceId]: {
+          ...data,
+          name: deviceName || `设备 ${data.deviceId}`,
+          timestamp: Date.now(),
+        },
+      }));
+    }
   }, [deviceList]);
 
-  // WebSocket URL 构建 - 使用固定的localhost地址
+  // WebSocket URL 构建
   const wsUrl = useMemo(() => {
     if (!selectedDevice || !loginUser?.id) return null;
     try {
       const url = new URL('ws://localhost:8001/api/gps-websocket');
       url.searchParams.set('wardId', loginUser.id.toString());
       url.searchParams.set('deviceId', selectedDevice);
-      console.log('WebSocket URL:', url.toString());
       return url.toString();
     } catch (e) {
       console.error('构建URL失败:', e);
@@ -155,18 +241,13 @@ const LiveMonitor = () => {
       message.error('连接发生错误');
     },
     onReconnect: (attempt: number) => {
-      console.log(`第${attempt}次重连...`);
       if (attempt >= 5) {
         setError('WebSocket连接已断开，请检查网络后刷新页面');
         message.warning('连接已断开，请检查网络后刷新页面');
       }
     },
     onOpen: () => {
-      console.log('WebSocket连接已建立');
       setError(null);
-    },
-    onClose: () => {
-      console.log('WebSocket连接关闭');
     }
   }), [handleWebSocketMessage]);
 
@@ -175,17 +256,15 @@ const LiveMonitor = () => {
 
   // 设备切换处理
   const handleDeviceChange = useCallback(async (deviceId: string) => {
+    if (deviceId === selectedDevice) return;
+
     setIsSwitching(true);
     setError(null);
     try {
       // 关闭当前连接
       close(1000, '设备切换');
-      // 等待短暂时间确保连接关闭
-      await new Promise(resolve => setTimeout(resolve, 300));
       // 更新选中设备
       setSelectedDevice(deviceId);
-      // 加载新设备的围栏数据
-      loadFences(deviceId);
       // 重新连接WebSocket
       reconnect();
     } catch (err) {
@@ -195,29 +274,25 @@ const LiveMonitor = () => {
     } finally {
       setIsSwitching(false);
     }
-  }, [close, loadFences, reconnect]);
+  }, [selectedDevice, close, reconnect]);
 
   // 格式化围栏数据
   const formattedFences = useMemo(() => {
     if (!showFences) return [];
 
-    return fences.map(fence => ({
+    return currentFences.map(fence => ({
       id: fence.id!,
       name: fence.name || '未命名围栏',
-      coordinates: fence.coordinates as [number, number][],
+      coordinates: fence.coordinates,
       color: fence.color || '#1890ff'
     }));
-  }, [fences, showFences]);
+  }, [currentFences, showFences]);
 
   // 初始化
   useEffect(() => {
     const init = async () => {
       try {
         await fetchDevices();
-        if (selectedDevice) {
-          await loadFences(selectedDevice);
-          reconnect();
-        }
       } catch (err) {
         console.error('初始化失败:', err);
         setError('初始化失败，请刷新页面重试');
@@ -225,15 +300,95 @@ const LiveMonitor = () => {
     };
     init();
 
-    // 组件卸载时关闭WebSocket连接
     return () => {
       close(1000, '组件卸载');
     };
   }, []);
 
-  const displayDevices = Object.values(devices).filter((d) =>
-    showAll || d.deviceId === selectedDevice
-  );
+  // 当前显示设备
+  const displayDevices = useMemo(() => {
+    return Object.values(devices).filter((d) =>
+      showAll || d.deviceId === selectedDevice
+    );
+  }, [devices, showAll, selectedDevice]);
+
+  // 报警浮窗渲染
+  const renderAlerts = useMemo(() => {
+    if (alerts.length === 0) return null;
+
+    return (
+      <div style={{
+        position: 'fixed',
+        top: 80,
+        right: 20,
+        zIndex: 9999,
+        width: 400,
+        maxHeight: '70vh',
+        overflowY: 'auto',
+        background: '#fff',
+        borderRadius: 8,
+        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+        border: '2px solid #ff4d4f'
+      }}>
+        <div style={{
+          padding: '12px 16px',
+          background: '#ff4d4f',
+          color: 'white',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <Text strong style={{ color: 'white', fontSize: 16 }}>
+            报警通知 ({alerts.length})
+          </Text>
+          <Button
+            size="small"
+            type="text"
+            style={{ color: 'white' }}
+            onClick={() => setAlerts([])}
+          >
+            清空所有
+          </Button>
+        </div>
+
+        <div style={{ padding: 16 }}>
+          {alerts.map((alert, index) => (
+            <div key={index} style={{
+              marginBottom: 16,
+              padding: 12,
+              borderLeft: '3px solid #ff4d4f',
+              background: '#fffafa'
+            }}>
+              <div style={{ display: 'flex', marginBottom: 8 }}>
+                <Tag color="red">{alert.type === 'GEO_FENCE' ? '围栏报警' : alert.type}</Tag>
+                <Text strong style={{ marginLeft: 8 }}>{alert.title}</Text>
+              </div>
+
+              <Text>{alert.message}</Text>
+
+              <div style={{ marginTop: 8 }}>
+                <Text type="secondary">围栏: {alert.fenceName}</Text>
+              </div>
+
+              {alert.longitude && (
+                <div style={{ marginTop: 8 }}>
+                  <Text type="secondary">
+                    位置: {alert.latitude?.toFixed(6)}, {alert.longitude?.toFixed(6)}
+                  </Text>
+                </div>
+              )}
+
+              <div style={{ marginTop: 8 }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  {dayjs(alert.timestamp).format('YYYY-MM-DD HH:mm:ss')}
+                </Text>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }, [alerts]);
 
   return (
     <PageContainer
@@ -265,6 +420,10 @@ const LiveMonitor = () => {
         </span>,
       ]}
     >
+      {/* 报警浮窗 */}
+      {renderAlerts}
+
+      {/* 错误提示 */}
       {error && (
         <Alert
           message="错误"
@@ -377,17 +536,13 @@ const LiveMonitor = () => {
 
               <Text strong>围栏统计</Text>
               <div style={{ padding: 8 }}>
-                <Text>总围栏数: <Tag color="purple">{fences.length}</Tag></Text>
-                <Text>显示中: <Tag color="green">{showFences ? fences.length : 0}</Tag></Text>
+                <Text>总围栏数: <Tag color="purple">{allFences.length}</Tag></Text>
+                <Text>当前设备: <Tag color="blue">{currentFences.length}</Tag></Text>
+                <Text>显示中: <Tag color="green">{showFences ? currentFences.length : 0}</Tag></Text>
               </div>
 
               <Divider />
 
-              <Text strong>连接信息</Text>
-              <div style={{ padding: 8 }}>
-                <Text>状态: <Tag color={status === 'connected' ? 'success' : 'error'}>{status}</Tag></Text>
-                <Text>服务端: <Tag>ws://localhost:8001</Tag></Text>
-              </div>
             </Space>
           </MonitorCard>
         </div>

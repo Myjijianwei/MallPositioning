@@ -1,52 +1,42 @@
 package com.project.mapapp.model.entity;
 
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.*;
+import com.project.mapapp.model.enums.AlertLevel;
+import com.project.mapapp.model.enums.AlertStatus;
+import com.project.mapapp.model.enums.AlertType;
 import lombok.Data;
 
-import java.util.Date;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
-/**
- * 报警记录表
- * @TableName alert
- */
 @TableName(value ="alert")
 @Data
 public class Alert {
-    /**
-     * 报警记录ID
-     */
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    /**
-     * 设备ID
-     */
     private String device_id;
+    private Long fence_id;
 
-    /**
-     * 报警类型
-     */
-    private Object type;
-
-    /**
-     * 报警信息
-     */
+    private AlertType type;
+    private AlertLevel level;
     private String message;
 
-    /**
-     * 触发时间
-     */
-    private Date triggered_at;
+    private BigDecimal latitude;
+    private BigDecimal longitude;
+    private String address;
 
-    /**
-     * 解决时间
-     */
-    private Date resolved_at;
+    @TableField("triggered_at")
+    private LocalDateTime triggeredAt;
 
-    /**
-     * 报警状态
-     */
-    private Object status;
+    @TableField("resolved_at")
+    private LocalDateTime resolvedAt;
+
+    private AlertStatus status;
+
+    @TableField(exist = false)
+    private String deviceName;
+
+    @TableField(exist = false)
+    private String fenceName;
 }

@@ -9,13 +9,19 @@
             <result property="device_id" column="device_id" />
             <result property="type" column="type" />
             <result property="message" column="message" />
-            <result property="triggered_at" column="triggered_at" />
-            <result property="resolved_at" column="resolved_at" />
+            <result property="triggeredAt" column="triggered_at" />
+            <result property="resolvedAt" column="resolved_at" />
             <result property="status" column="status" />
+            <result property="fence_id" column="fence_id" />
+            <result property="level" column="level" />
+            <result property="latitude" column="latitude" />
+            <result property="longitude" column="longitude" />
+            <result property="address" column="address" />
     </resultMap>
 
     <sql id="Base_Column_List">
         id,device_id,type,message,triggered_at,resolved_at,
-        status
+        status,fence_id,level,latitude,longitude,
+        address
     </sql>
 </mapper>

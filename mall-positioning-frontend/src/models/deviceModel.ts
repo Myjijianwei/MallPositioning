@@ -1,11 +1,11 @@
 import { useState, useCallback } from 'react';
-import { useModel } from '@umijs/max';
 import {
   getMySelfDeviceInfoUsingGet,
   getWardDeviceUsingGet,
 } from '@/services/MapBackend/deviceController';
 import { message } from 'antd';
 import { getLatestLocationUsingGet } from '@/services/MapBackend/locationDataController';
+import { useModel } from 'umi';
 
 export default () => {
   const { initialState } = useModel('@@initialState');

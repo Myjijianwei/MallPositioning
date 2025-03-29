@@ -51,3 +51,32 @@ ol {
     }
   }
 }
+// 警报表格行样式
+.alert-acknowledged {
+  opacity: 0.6;
+  background-color: #fafafa;
+
+  td {
+    text-decoration: line-through;
+  }
+}
+
+.alert-unread {
+  font-weight: 500;
+
+  &:hover {
+    background-color: #f0f9ff;
+  }
+}
+
+// 表格操作按钮样式
+.ant-table-cell .ant-btn-sm {
+  padding: 0 4px;
+  font-size: 12px;
+}
+
+// 空状态样式
+.ant-empty-normal {
+  margin: 40px 0;
+  color: rgba(0, 0, 0, 0.45);
+}

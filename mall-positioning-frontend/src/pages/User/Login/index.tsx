@@ -12,13 +12,12 @@ import {
   ProFormCheckbox,
   ProFormText,
 } from '@ant-design/pro-components';
-import { history, useModel } from '@umijs/max';
+import { useModel, Link } from '@umijs/max'; // 使用Umi的Link组件
 import { Alert, message, Tabs } from 'antd';
 import React, { useState, useEffect, useRef } from 'react';
 import { useForm } from 'antd/es/form/Form';
 import Footer from '@/components/Footer';
 import styles from './index.less';
-import { useNavigate } from 'react-router-dom';
 import { loginByEmailUsingPost, userLoginUsingPost } from '@/services/MapBackend/userController';
 import { sendEmailUsingGet } from "@/services/MapBackend/msmController";
 
@@ -50,34 +49,40 @@ const LoginMessage: React.FC<{
 const Login: React.FC = () => {
   const [userLoginState] = useState<any>({});
   const [type, setType] = useState<string>('account');
-  const { setInitialState } = useModel('@@initialState');
+  const { initialState, setInitialState } = useModel('@@initialState');
   const [form] = useForm();
-  const isMounted = useRef(true); // 修复内存泄漏问题
+  const isMounted = useRef(true);
 
   useEffect(() => {
     return () => {
-      isMounted.current = false; // 组件卸载时标记
+      isMounted.current = false;
     };
   }, []);
 
-  const navigate = useNavigate();
   const handleSubmit = async (values: any) => {
     try {
-      let res;
+      let res: { data: any; code?: number | undefined; message?: string | undefined };
       if (type === 'account') {
+        // @ts-ignore
         res = await userLoginUsingPost(values);
       } else if (type === 'email') {
+        // @ts-ignore
         res = await loginByEmailUsingPost(values);
       }
+
+      // @ts-ignore
       if (res?.data && isMounted.current) {
         message.success('登录成功！');
-        // @ts-ignore
         localStorage.setItem('userId', res.data.id);
-        navigate('/welcome');
-        // @ts-ignore
-        setInitialState({
+
+        await setInitialState((prevState: any) => ({
+          ...prevState,
+          currentUser: res.data,
           loginUser: res.data,
-        });
+        }));
+
+        // 使用Umi的history跳转
+        window.location.href = '/welcome';
       }
     } catch (error) {
       if (isMounted.current) {
@@ -135,7 +140,7 @@ const Login: React.FC = () => {
                 fieldProps={{
                   size: 'large',
                   prefix: <UserOutlined />,
-                  autoComplete: 'username', // 修复自动完成警告
+                  autoComplete: 'username',
                   id: 'userAccount',
                 }}
                 placeholder="用户名: admin or user"
@@ -230,17 +235,15 @@ const Login: React.FC = () => {
             <ProFormCheckbox noStyle name="autoLogin">
               自动登录
             </ProFormCheckbox>
-            <a
-              style={{
-                float: 'right',
-              }}
-              onClick={() => history.push('/forgot-password')}
+            <Link
+              to="/user/forgot-password"
+              style={{ float: 'right' }}
             >
               忘记密码 ?
-            </a>
+            </Link>
           </div>
           <div style={{ textAlign: 'center' }}>
-            <a onClick={() => history.push('/user/register')}>没有账号？点击注册</a>
+            <Link to="/user/register">没有账号？点击注册</Link>
           </div>
         </LoginForm>
       </div>

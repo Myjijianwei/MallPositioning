@@ -386,4 +386,24 @@ public class UserController {
         }
     }
 
+    /**
+     * 重置密码
+     */
+    @PostMapping("/resetPassword")
+    public BaseResponse<Boolean> resetPassword(@RequestBody ResetPasswordRequest resetRequest) {
+        if (resetRequest == null) {
+            throw new BusinessException(PARAMS_ERROR, "参数不能为空");
+        }
+        try {
+            boolean result = userService.resetPassword(
+                    resetRequest.getEmail(),
+                    resetRequest.getCode(),
+                    resetRequest.getNewPassword(),
+                    resetRequest.getConfirmPassword()
+            );
+            return ResultUtils.success(result);
+        } catch (BusinessException e) {
+            return ResultUtils.error(e.getCode(), e.getMessage());
+        }
+    }
 }
